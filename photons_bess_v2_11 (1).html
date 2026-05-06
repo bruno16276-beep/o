@@ -2,6 +2,176 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<title>Login BESS</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f3f2ef;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* CARD */
+.login-container {
+  background: white;
+  padding: 40px;
+  border-radius: 14px;
+  width: 350px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+/* ICON */
+.icon {
+  width: 40px;
+  height: 40px;
+  background: #0f2d13;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 15px;
+  color: #ffd54f;
+  font-size: 18px;
+}
+
+/* TITULO */
+h2 {
+  margin: 10px 0 5px;
+  font-size: 20px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 25px;
+}
+
+/* LABEL */
+label {
+  display: block;
+  text-align: left;
+  font-size: 11px;
+  color: #555;
+  margin-bottom: 5px;
+  margin-top: 15px;
+}
+
+/* INPUT */
+input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  outline: none;
+}
+
+/* BOTÃO */
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 20px;
+  background: #0f2d13;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover {
+  background: #0b2210;
+}
+
+#status {
+  margin-top: 15px;
+  font-size: 13px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="login-container">
+
+  <div class="icon">⚡</div>
+
+  <h2>Bem-vindo</h2>
+  <div class="subtitle">Acesse o dashboard BESS</div>
+
+  <label>EMAIL</label>
+  <input type="email" id="email" placeholder="seu@email.com">
+
+  <label>SENHA</label>
+  <input type="password" id="senha" placeholder="••••••••">
+
+  <button onclick="login()">Entrar</button>
+
+  <p id="status"></p>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const supabaseClient = window.supabase.createClient(
+  'https://rxmfafapkmyvswdeaxgu.supabase.co',
+  'sb_publishable_Q0wAaL6_2GrES9DxyFLqSQ_Yy91KZnI'
+)
+
+async function login() {
+  const email = document.getElementById('email').value
+  const senha = document.getElementById('senha').value
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: email,
+    password: senha
+  })
+
+  if (error) {
+    document.getElementById('status').innerText = "Email ou senha inválidos"
+    return
+  }
+
+  const { data: userData, error: userError } = await supabaseClient
+    .from('usuarios')
+    .select('*')
+    .eq('email', email)
+    .single()
+
+  if (userError || !userData) {
+    document.getElementById('status').innerText = "Usuário não encontrado"
+    return
+  }
+
+  if (!userData.ativo) {
+    document.getElementById('status').innerText = "Acesso desativado"
+    return
+  }
+
+  if (userData.expira_em && new Date(userData.expira_em) < new Date()) {
+    document.getElementById('status').innerText = "Acesso expirado"
+    return
+  }
+
+  document.getElementById('status').innerText = "Login OK ✅"
+}
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Photons Energia Solar — Dashboard BESS v2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
