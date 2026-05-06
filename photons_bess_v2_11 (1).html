@@ -1,0 +1,1976 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photons Energia Solar — Dashboard BESS v2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#f4f3ef;--surface:#fff;--surface2:#f0efe9;--border:#e0ddd5;
+  --text:#18170f;--text2:#6b6960;--text3:#a09e96;
+  --green:#3a5c1e;--green-bg:#eaf4ea;--green-bd:#b3d9b3;
+  --blue:#0f4a8a;--blue-bg:#e6f0fb;--blue-bd:#aecdef;
+  --purple:#3d2fa0;--purple-bg:#edeafb;
+  --amber:#7a4d00;--amber-bg:#fdf2e0;--amber-bd:#f0cc80;
+  --red:#8a1414;--red-bg:#fdeaea;--red-bd:#f0b8b8;
+  --warn:#7a5500;--warn-bg:#fff8e6;--warn-bd:#f0d890;
+  --r:10px;--rsm:6px;
+  --sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --shm:0 8px 28px rgba(0,0,0,.14)
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+.app{max-width:1120px;margin:0 auto;padding:24px 18px}
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{width:36px;height:36px;background:#1a2e10;border-radius:9px;display:flex;align-items:center;justify-content:center}
+.brand-icon svg{width:18px;height:18px;fill:#6ecf50}
+.brand-name{font-size:17px;font-weight:600;color:var(--green);letter-spacing:-.02em}
+.brand-sub{font-size:11px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text2)}
+.badge b{color:var(--text)}
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast-item{padding:11px 18px;border-radius:9px;font-size:13px;font-weight:500;box-shadow:var(--shm);pointer-events:all;opacity:1;transition:opacity .4s;max-width:340px}
+.toast-ok{background:#1a2e10;color:#7ecf5a}
+.toast-warn{background:#fff8e6;color:var(--warn);border:1px solid var(--warn-bd)}
+.toast-err{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+/* TABS */
+.tabs-wrap{display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.tabs-bar{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px;flex-wrap:wrap;flex:1}
+.tab{padding:7px 14px;border-radius:var(--rsm);font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:none;transition:all .15s;white-space:nowrap;font-family:inherit}
+.tab:hover{background:var(--surface2);color:var(--text)}
+.tab.active{background:var(--text);color:#fff}
+.tabwrap{position:relative;display:inline-flex;align-items:center}
+.tabdel{display:none;position:absolute;top:-6px;right:-6px;width:16px;height:16px;border-radius:50%;background:var(--red);color:#fff;font-size:9px;font-weight:700;border:none;cursor:pointer;align-items:center;justify-content:center;z-index:2;line-height:1}
+.tabwrap:hover .tabdel{display:flex}
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:var(--rsm);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--surface);color:var(--text2)}
+.btn:hover{background:var(--surface2)}
+.btn-prim{background:var(--text);color:#fff;border-color:var(--text)}
+.btn-prim:hover{opacity:.85}
+.btn-green{background:#1a2e10;color:#fff;border-color:#1a2e10}
+.btn-green:hover{background:var(--green)}
+.btn-red{background:var(--red-bg);color:var(--red);border-color:var(--red-bd)}
+.btn-red:hover{background:var(--red);color:#fff}
+.btn-amber{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-bd)}
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;background:var(--surface);position:relative;margin-bottom:18px;transition:all .2s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--green);background:var(--green-bg)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-row{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.upload-icon{width:34px;height:34px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.upload-icon svg{width:17px;height:17px;stroke:var(--text2);fill:none;stroke-width:1.5}
+.proc{display:none;align-items:center;gap:8px;padding:10px 14px;background:var(--blue-bg);border:1px solid var(--blue-bd);border-radius:var(--rsm);font-size:13px;color:var(--blue);margin-bottom:10px}
+.spin{width:15px;height:15px;border:2px solid var(--blue-bd);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* PREMISSAS */
+.prem-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh);margin-bottom:18px}
+.prem-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.prem-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:11px}
+.inp-g{display:flex;flex-direction:column;gap:4px}
+.inp-g label{font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.inp-g input{padding:7px 9px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;transition:border-color .15s}
+.inp-g input:focus{outline:none;border-color:var(--green)}
+.inp-g .unit{font-size:10px;color:var(--text3);margin-top:2px}
+.divider-label{grid-column:1/-1;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:6px 0 2px;border-top:1px solid var(--border);margin-top:4px}
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);margin-bottom:16px}
+.card-hdr{padding:11px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);background:var(--surface2);display:flex;align-items:center;justify-content:space-between}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh)}
+.kpi-lbl{font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.kpi-val{font-size:20px;font-weight:600;letter-spacing:-.02em;font-family:'IBM Plex Mono',monospace}
+.kpi.g{border-color:var(--green-bd);background:var(--green-bg)}.kpi.g .kpi-val{color:var(--green)}
+.kpi.b{border-color:var(--blue-bd);background:var(--blue-bg)}.kpi.b .kpi-val{color:var(--blue)}
+.kpi.p{background:var(--purple-bg)}.kpi.p .kpi-val{color:var(--purple)}
+.kpi.a{background:var(--amber-bg)}.kpi.a .kpi-val{color:var(--amber)}
+.kpi.r{background:var(--red-bg)}.kpi.r .kpi-val{color:var(--red)}
+/* TABLE */
+.dtbl{width:100%;border-collapse:collapse;font-size:13px}
+.dtbl th{padding:7px 13px;text-align:left;font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:var(--surface2)}
+.dtbl td{padding:8px 13px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top}
+.dtbl tr:last-child td{border-bottom:none}
+.dtbl tr:hover td{background:var(--surface2)}
+.val{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.pos{color:var(--green);font-weight:600}
+.neg{color:var(--red);font-weight:600}
+.tdf{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text2);background:var(--surface2);border-radius:4px;padding:2px 6px;display:inline-block}
+/* PROPOSTA */
+.proposta{background:#1a2e10;color:#fff;border-radius:var(--r);padding:22px;margin-bottom:18px}
+.prop-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);margin-bottom:14px}
+.prop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px}
+.prop-item{background:rgba(255,255,255,.08);border-radius:8px;padding:13px 15px}
+.prop-lbl{font-size:11px;color:rgba(255,255,255,.5);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+.prop-val{font-size:18px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:#fff;letter-spacing:-.02em}
+.prop-sub{font-size:11px;color:rgba(255,255,255,.38);margin-top:3px}
+/* ROI */
+.roi-card{background:var(--surface);border:1px solid var(--amber-bd);border-radius:var(--r);padding:18px;box-shadow:var(--sh);margin-bottom:18px}
+.roi-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--amber);margin-bottom:14px}
+.roi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px}
+.roi-item{background:var(--amber-bg);border-radius:8px;padding:12px 14px}
+.roi-lbl{font-size:11px;color:var(--amber);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.roi-val{font-size:22px;font-weight:600;color:var(--amber);font-family:'IBM Plex Mono',monospace;letter-spacing:-.02em}
+.roi-sub{font-size:11px;color:var(--text2);margin-top:3px}
+/* MEM */
+.mem-toggle{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--blue);cursor:pointer;padding:5px 0;border:none;background:none;font-family:inherit}
+.mem-box{display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);padding:14px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.9;white-space:pre-wrap;color:var(--text);margin-top:6px;overflow-x:auto}
+.mem-box.open{display:block}
+/* ALERTS */
+.alert{border-radius:var(--rsm);padding:9px 13px;font-size:12px;margin-bottom:10px;display:flex;align-items:flex-start;gap:8px}
+.alert-warn{background:var(--warn-bg);border:1px solid var(--warn-bd);color:var(--warn)}
+.alert-err{background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red)}
+.alert-ok{background:var(--green-bg);border:1px solid var(--green-bd);color:var(--green)}
+.alert-info{background:var(--blue-bg);border:1px solid var(--blue-bd);color:var(--blue)}
+/* TOTAL TAG */
+.total-tag{display:inline-flex;align-items:center;gap:10px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:var(--rsm);padding:10px 16px;margin-bottom:16px;flex-wrap:wrap}
+.ttlbl{font-size:12px;color:var(--green);font-weight:500}
+.ttval{font-size:19px;font-weight:700;color:var(--green);font-family:'IBM Plex Mono',monospace}
+/* CHART */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh);margin-bottom:16px}
+.chart-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:14px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--text2);margin-top:8px;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:4px}
+.dot{width:10px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0}
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:580px){.two-col{grid-template-columns:1fr}}
+/* EMPTY */
+.empty{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:var(--surface);border-radius:14px;width:100%;max-width:760px;max-height:92vh;overflow-y:auto;box-shadow:var(--shm)}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2);border-radius:14px 14px 0 0;position:sticky;top:0;z-index:2}
+.modal-hdr-title{font-size:15px;font-weight:600}
+.modal-hdr-sub{font-size:11px;color:var(--text2)}
+.modal-close{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:none;cursor:pointer;font-size:14px;color:var(--text2);display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:var(--red-bg);color:var(--red)}
+.modal-body{padding:20px}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--surface2);border-radius:0 0 14px 14px;position:sticky;bottom:0}
+/* CONFIDENCE */
+.conf-high{color:var(--green);font-size:11px;font-weight:600}
+.conf-med{color:var(--amber);font-size:11px;font-weight:600}
+.conf-low{color:var(--red);font-size:11px;font-weight:600}
+.field-ok input{border-color:var(--green-bd)!important;background:var(--green-bg)!important}
+.field-warn input{border-color:var(--amber-bd)!important;background:var(--amber-bg)!important}
+.field-err input{border-color:var(--red-bd)!important;background:var(--red-bg)!important}
+/* FORM GRID */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;justify-content:space-between}
+.fg input{padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+.fg input:focus{border-color:var(--green)}
+/* CONFIDENCE BADGE */
+.cbadge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600}
+.cbadge-h{background:var(--green-bg);color:var(--green)}
+.cbadge-m{background:var(--amber-bg);color:var(--amber)}
+.cbadge-l{background:var(--red-bg);color:var(--red)}
+/* POP CONFIRM */
+.pop-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px}
+.pop{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;width:320px;box-shadow:var(--shm)}
+.pop h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.pop p{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5}
+.pop-btns{display:flex;gap:8px;justify-content:flex-end}
+/* TEXT VIEWER */
+.text-viewer{font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.7;white-space:pre-wrap;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);padding:14px;max-height:400px;overflow-y:auto;color:var(--text2)}
+/* EXPORT BAR */
+.export-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+@media print{.no-print{display:none!important}.app{max-width:100%;padding:10px}}
+@media(max-width:480px){.kpi-grid{grid-template-columns:1fr 1fr}.prem-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- TOPBAR -->
+  <div class="topbar no-print">
+    <div class="brand">
+      <div class="brand-icon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 3l2.5 5h5l-4 3 1.5 5L12 15l-5 3 1.5-5-4-3h5z"/></svg></div>
+      <div><div class="brand-name">Photons Energia Solar</div><div class="brand-sub">Dashboard BESS v2.0</div></div>
+    </div>
+    <div class="topbar-right">
+      <div class="badge"><b id="badge-n">0</b> fatura(s)</div>
+      <span id="save-status" style="font-size:11px;color:var(--text3)"></span>
+    </div>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="upload-zone no-print" id="dropzone">
+    <input type="file" id="file-input" accept=".pdf" multiple>
+    <div class="upload-row">
+      <div class="upload-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+      <div><div style="font-size:14px;font-weight:500">Arraste faturas PDF ou clique para selecionar</div><div style="font-size:11px;color:var(--text2)">Múltiplos arquivos · Neoenergia/Elektro · Extração automática com conferência</div></div>
+      <div style="padding:7px 16px;background:var(--text);color:#fff;border-radius:var(--rsm);font-size:12px;font-weight:600">Selecionar</div>
+    </div>
+  </div>
+  <div class="proc no-print" id="proc"><div class="spin"></div><span id="proc-msg">Lendo PDF...</span></div>
+
+  <!-- PREMISSAS -->
+  <div class="prem-card no-print">
+    <div class="prem-title">
+      <span>Premissas do BESS</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-amber" onclick="exportarJSON()" style="font-size:11px;padding:4px 10px">⬇ Exportar JSON</button>
+        <button class="btn" onclick="importarJSON()" style="font-size:11px;padding:4px 10px">⬆ Importar JSON</button>
+        <button class="btn btn-red" onclick="limparEstudo()" style="font-size:11px;padding:4px 10px">✕ Limpar</button>
+        <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importarJSONFile(event)">
+      </div>
+    </div>
+    <div class="prem-grid">
+      <div class="divider-label">Eficiência</div>
+      <div class="inp-g"><label>η_chg (%)</label><input type="number" id="eta_chg" value="95" min="1" max="100" step="1" oninput="recalcAll()"><div class="unit">Eficiência de carga</div></div>
+      <div class="inp-g"><label>η_dis (%)</label><input type="number" id="eta_dis" value="95" min="1" max="100" step="1" oninput="recalcAll()"><div class="unit">Eficiência de descarga</div></div>
+      <div class="inp-g"><label>DoD (%)</label><input type="number" id="dod" value="90" min="1" max="100" step="1" oninput="recalcAll()"></div>
+      <div class="inp-g"><label>E_aux (kWh/dia)</label><input type="number" id="eaux" value="10" min="0" step="1" oninput="recalcAll()"><div class="unit">Standby</div></div>
+      <div class="divider-label">Fator de capacidade</div>
+      <div class="inp-g"><label>Overbuild (%)</label><input type="number" id="ovb" value="80" min="1" max="100" step="1" oninput="recalcAll()"></div>
+      <div class="inp-g"><label>Augmentation (%)</label><input type="number" id="aug" value="90" min="1" max="100" step="1" oninput="recalcAll()"></div>
+      <div class="divider-label">Arbitragem</div>
+      <div class="inp-g"><label>Fração cobertura (%)</label><input type="number" id="frac" value="70" min="1" max="100" step="5" oninput="recalcAll()"><div class="unit">% da energia ponta</div></div>
+      <div class="inp-g"><label>Dias úteis/mês</label><input type="number" id="dias" value="22" min="1" max="31" step="1" oninput="recalcAll()"></div>
+      <div class="inp-g"><label>Janela ponta (h)</label><input type="number" id="hponta" value="3" min="0.5" max="8" step="0.5" oninput="recalcAll()"></div>
+      <div class="divider-label">Backup</div>
+      <div class="inp-g"><label>P_backup (kW)</label><input type="number" id="pbkp" value="0" min="0" step="10" oninput="recalcAll()"></div>
+      <div class="inp-g"><label>t_backup (h)</label><input type="number" id="tbkp" value="0.5" min="0.1" step="0.1" oninput="recalcAll()"></div>
+      <div class="divider-label">Financeiro</div>
+      <div class="inp-g"><label>CAPEX R$ (opcional)</label><input type="number" id="capex" value="" placeholder="Ex: 800000" oninput="recalcAll()"></div>
+    </div>
+  </div>
+
+  <!-- EXPORT BAR -->
+  <div class="export-bar no-print" id="export-bar" style="display:none">
+    <button class="btn" onclick="exportarCSV()">⬇ CSV</button>
+    <button class="btn" onclick="gerarRelatorioMes()">🖨 Imprimir mês</button>
+    <button class="btn btn-green" onclick="gerarRelatorioCompleto()">📄 Relatório completo PDF</button>
+    <button class="btn btn-prim" onclick="carregarDemo()">Demo</button>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-wrap no-print" id="tabs-wrap" style="display:none">
+    <div class="tabs-bar" id="tabs-bar"></div>
+    <button class="btn btn-red" onclick="confirmarReset()" style="font-size:12px">✕ Apagar tudo</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content"></div>
+
+  <!-- EMPTY -->
+  <div class="empty no-print" id="empty-state">
+    <div class="empty-icon">⚡</div>
+    <h3>Dashboard BESS v2.0 pronto</h3>
+    <p style="margin-bottom:16px">Faça upload de faturas PDF ou carregue os dados de demonstração</p>
+    <button class="btn btn-green" onclick="carregarDemo()">Carregar demonstração</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- MODAL CONFERÊNCIA PDF -->
+<div id="modal-conf" class="modal-ov" style="display:none">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div><div class="modal-hdr-title">Conferência dos dados extraídos</div><div class="modal-hdr-sub" id="conf-sub">Verifique e corrija os dados antes de confirmar</div></div>
+      <button class="modal-close" onclick="fecharConf()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="conf-alerts"></div>
+      <div id="conf-confidence" style="margin-bottom:14px;font-size:12px;color:var(--text2)"></div>
+      <div class="form-grid" id="conf-form"></div>
+      <div style="margin-top:14px">
+        <button class="btn" onclick="verTextoPDF()" style="font-size:11px">🔍 Ver texto extraído do PDF</button>
+      </div>
+      <div id="conf-text-viewer" style="display:none;margin-top:10px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharConf()">Cancelar</button>
+      <button class="btn btn-green" onclick="confirmarFatura()">✓ Confirmar e adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR FATURA -->
+<div id="modal-edit" class="modal-ov" style="display:none">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div><div class="modal-hdr-title">Editar dados da fatura</div><div class="modal-hdr-sub" id="edit-sub">Altere os campos e confirme para recalcular</div></div>
+      <button class="modal-close" onclick="fecharEdit()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" id="edit-form"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharEdit()">Cancelar</button>
+      <button class="btn btn-green" onclick="salvarEdit()">✓ Salvar e recalcular</button>
+    </div>
+  </div>
+</div>
+
+<!-- POP CONFIRM -->
+<div id="pop-ov" class="pop-ov" style="display:none" onclick="if(event.target===this)fecharPop()">
+  <div class="pop">
+    <h3 id="pop-title">Confirmar</h3><p id="pop-msg"></p>
+    <div class="pop-btns">
+      <button class="btn" onclick="fecharPop()">Cancelar</button>
+      <button class="btn btn-red" id="pop-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+/* ═══════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════ */
+const VERSION = '2.0.0';
+const STOR_KEY = 'ph_bess_study_v2';
+let STATE = { faturas: [], activeTab: '', charts: {} };
+let confPending = null;  // fatura aguardando confirmação
+let editId = null;       // id da fatura sendo editada
+let rawPdfText = '';     // texto do PDF atual para auditoria
+
+/* ═══════════════════════════════════════════════════════════
+   HOOKS FUTUROS (backend)
+═══════════════════════════════════════════════════════════ */
+function futureBackendAuthHook(){}
+function futureLicenseValidationHook(){}
+function futureSaveToServerHook(data){}
+
+/* ═══════════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════════ */
+function toast(msg, type='ok', dur=3000){
+  const el=document.getElementById('toast');
+  const d=document.createElement('div');
+  d.className='toast-item toast-'+type;
+  d.textContent=msg;
+  el.appendChild(d);
+  setTimeout(()=>{d.style.opacity='0';setTimeout(()=>d.remove(),450);},dur);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PERSISTENCE
+═══════════════════════════════════════════════════════════ */
+function salvarEstudo(){
+  const p = getP();
+  const data = {
+    version: VERSION,
+    savedAt: new Date().toISOString(),
+    premissas: p,
+    premissasRaw: {
+      eta_chg: document.getElementById('eta_chg').value,
+      eta_dis: document.getElementById('eta_dis').value,
+      dod: document.getElementById('dod').value,
+      eaux: document.getElementById('eaux').value,
+      ovb: document.getElementById('ovb').value,
+      aug: document.getElementById('aug').value,
+      frac: document.getElementById('frac').value,
+      dias: document.getElementById('dias').value,
+      hponta: document.getElementById('hponta').value,
+      pbkp: document.getElementById('pbkp').value,
+      tbkp: document.getElementById('tbkp').value,
+      capex: document.getElementById('capex').value,
+    },
+    faturas: STATE.faturas.map(f => {
+      const fc = Object.assign({}, f);
+      delete fc.rawPdfText;
+      return fc;
+    })
+  };
+  localStorage.setItem(STOR_KEY, JSON.stringify(data));
+  document.getElementById('save-status').textContent = 'Salvo ' + new Date().toLocaleTimeString('pt-BR');
+  futureSaveToServerHook(data);
+}
+
+function carregarEstudoSalvo(){
+  try {
+    const raw = localStorage.getItem(STOR_KEY);
+    if(!raw) return false;
+    const data = JSON.parse(raw);
+    if(!data.faturas || !data.faturas.length) return false;
+    return data;
+  } catch(e){ return false; }
+}
+
+function restaurarEstudo(data){
+  if(data.premissasRaw){
+    Object.keys(data.premissasRaw).forEach(k=>{
+      const el=document.getElementById(k);
+      if(el) el.value=data.premissasRaw[k];
+    });
+  }
+  STATE.faturas = data.faturas;
+  if(STATE.faturas.length) {
+    STATE.activeTab = STATE.faturas[0].id;
+    document.getElementById('empty-state').style.display='none';
+  }
+  renderUI();
+  toast('Estudo carregado ('+STATE.faturas.length+' fatura(s))','ok');
+}
+
+function exportarJSON(){
+  const p = getP();
+  const data = {
+    version: VERSION,
+    exportedAt: new Date().toISOString(),
+    premissasRaw: {
+      eta_chg:document.getElementById('eta_chg').value,
+      eta_dis:document.getElementById('eta_dis').value,
+      dod:document.getElementById('dod').value,
+      eaux:document.getElementById('eaux').value,
+      ovb:document.getElementById('ovb').value,
+      aug:document.getElementById('aug').value,
+      frac:document.getElementById('frac').value,
+      dias:document.getElementById('dias').value,
+      hponta:document.getElementById('hponta').value,
+      pbkp:document.getElementById('pbkp').value,
+      tbkp:document.getElementById('tbkp').value,
+      capex:document.getElementById('capex').value,
+    },
+    faturas: STATE.faturas.map(f=>{ const fc=Object.assign({},f); delete fc.rawPdfText; return fc; })
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'estudo_bess_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  toast('Estudo exportado em JSON','ok');
+}
+
+function importarJSON(){
+  document.getElementById('import-json-input').click();
+}
+
+function importarJSONFile(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(!data.faturas) throw new Error('JSON inválido');
+      restaurarEstudo(data);
+      toast('Estudo importado com sucesso','ok');
+    }catch(err){
+      toast('Erro ao importar JSON: '+err.message,'err');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function limparEstudo(){
+  mostrarPop('Limpar estudo?','Todos os dados serão apagados e o estudo salvo será removido.','Limpar tudo',()=>{
+    localStorage.removeItem(STOR_KEY);
+    STATE.faturas=[];STATE.activeTab='';
+    Object.values(STATE.charts).forEach(c=>{try{c.destroy()}catch(e){}});STATE.charts={};
+    document.getElementById('file-input').value='';
+    document.getElementById('empty-state').style.display='block';
+    document.getElementById('save-status').textContent='';
+    renderUI();
+    toast('Estudo limpo','ok');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PDF PARSER — FUNÇÕES AUXILIARES
+═══════════════════════════════════════════════════════════ */
+function parseBrazilianNumber(s){
+  if(s==null||s==='') return null;
+  s = String(s).trim().replace(/[^\d,\.]/g,'');
+  if(!s) return null;
+  if(s.includes(',') && s.includes('.')){
+    // 1.234,56 → milhar + decimal BR
+    if(s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g,'').replace(',','.');
+    else s = s.replace(/,/g,'');
+  } else if(s.includes(',')){
+    // 0,612036 → decimal BR
+    s = s.replace(',','.');
+  } else if(s.includes('.')){
+    // Só ponto: distinguir milhar (6.443) de decimal (218.44 / 0.612036)
+    const parts = s.split('.');
+    if(parts.length === 2 && parts[1].length === 3 && parts[0].length >= 1){
+      // Ex: 6.443, 49.658 → milhar
+      s = parts[0] + parts[1];
+    }
+    // 218.44, 0.612036 → mantém como decimal (parts[1].length != 3)
+  }
+  const v = parseFloat(s);
+  return isNaN(v) ? null : v;
+}
+
+function extractReferenceMonth(text){
+  const months = ['Janeiro','Fevereiro','Marco','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const re = new RegExp('\\b('+months.join('|')+')[\\s\\/](\\d{4})\\b','i');
+  const m = text.match(re);
+  if(m) return m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase()+'/'+m[2];
+  // Abreviações 3 letras (FEV/2026, JAN/2026, etc.)
+  const ABREV = {FEV:'Fevereiro',JAN:'Janeiro',MAR:'Março',ABR:'Abril',
+    MAI:'Maio',JUN:'Junho',JUL:'Julho',AGO:'Agosto',
+    SET:'Setembro',OUT:'Outubro',NOV:'Novembro',DEZ:'Dezembro'};
+  const re2 = /\b(FEV|JAN|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[\/\s](\d{4})\b/i;
+  const m2 = text.match(re2);
+  if(m2){
+    const abr = m2[1].toUpperCase();
+    return (ABREV[abr]||abr)+'/'+m2[2];
+  }
+  return null;
+}
+
+function extractInvoiceTotal(text){
+  // Padrão: R$58.836,89 ou TOTAL A PAGAR ... 58.836,89
+  const patterns = [
+    /TOTAL A PAGAR[\s\S]{0,50}?R?\$?\s*([\d\.]+,\d{2})/i,
+    /R\$\s*([\d\.]+,\d{2})\s+\d{2}\/\d{2}\/\d{4}/,
+    /(\d{2,3}\.\d{3},\d{2})\s*$/m
+  ];
+  for(const re of patterns){
+    const m = text.match(re);
+    if(m) return parseBrazilianNumber(m[1]);
+  }
+  return null;
+}
+
+function extractBillingDays(text){
+  // Neoenergia: "31/01/2026 28/02/2026 29 01/04/2026"
+  var m = text.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d+)\s+\d{2}\/\d{2}\/\d{4}/i);
+  if(m) return parseInt(m[3]);
+  // CPFL: "28" isolado na linha de cabeçalho (Nº de dias)
+  m = text.match(/N[º°o]\s*de\s*[Dd]ias[:\s]*(\d+)/i)
+    || text.match(/N[ºo]\s*DIAS\s+FAT[^\n]*(\d{2})\b/i);
+  if(m) return parseInt(m[1]);
+  // CPFL: linha "28/02/2026 31/01/2026 28" (leitura atual, anterior, nº dias)
+  m = text.match(/\d{2}\/\d{2}\/\d{4}\s+\d{2}\/\d{2}\/\d{4}\s+(\d{2})\b/i);
+  if(m) return parseInt(m[1]);
+  return null;
+}
+
+function extractContractedDemand(text){
+  const m = text.match(/Demanda\s+Todos\s+os\s+Per[íi]odos[\s:]+(\d+)\s*kW/i)
+    || text.match(/DEMANDA\s+CONTRATADA[\s:]+(\d+)\s*kW/i)
+    || text.match(/DEMANDA\s+TODOS[\s:]+(\d+)/i);
+  if(m) return parseBrazilianNumber(m[1]);
+  return null;
+}
+
+function extractVencimento(text){
+  const m = text.match(/R\$[\d\.,]+\s+(\d{2}\/\d{2}\/\d{4})/i)
+    || text.match(/VENCIMENTO[\s:]+(\d{2}\/\d{2}\/\d{4})/i)
+    || text.match(/(\d{2}\/\d{2}\/\d{4})\s+R\$\s*[\d\.]+,\d{2}/);
+  return m ? m[1] : null;
+}
+
+function extractCPFLPaulistaTable(text){
+  // Parser CPFL Paulista / CPFL Energia
+  // Formato: LABEL [unid]-TIPO MES/ANO kWh QTD TARIFA_ANEEL TARIFA_TRIB VALOR ...
+  // Ex: "Consumo Ponta [KWh] - TUSD FEV/26 kWh 167,4112 1,29459000 1,66500211 278,74 ..."
+  // Detectar por presença de "CPFL" ou "COMPANHIA PAULISTA" ou "DANF3E" + padrão de linha
+
+  var isCPFL = /CPFL|COMPANHIA PAULISTA|PAULISTA DE FORÇA|DANF3E/i.test(text);
+  if(!isCPFL) return {ok:false};
+
+  var result = {
+    consumoPonta:null, consumoFP:null,
+    tePonta:null, tusdPonta:null, tarifaPonta:null,
+    teFP:null, tusdFP:null, tarifaFP:null,
+    demandaContratada:null, demandaRegistrada:null,
+    demandaUltrapassada:null, tarifaDemTUSD:null,
+    tarifaUltrapassagem:null,
+    confidence:{}
+  };
+
+  // Consumo Ponta TUSD → QTD = consumoPonta, TARIFA = tusdPonta
+  var m;
+  m = text.match(/Consumo\s+Ponta\s+\[KWh\][^\n]*kWh\s+([\d,\.]+)\s+([\d,]{6,})/i);
+  if(m){
+    result.consumoPonta = parseBrazilianNumber(m[1]);
+    result.tusdPonta    = parseBrazilianNumber(m[2]);
+    result.confidence.consumoPonta = 'h';
+    result.confidence.tusdPonta    = 'h';
+  }
+
+  // Consumo Ponta TE → TARIFA = tePonta
+  m = text.match(/Cons\s+Ponta\s*[-–]\s*TE[^\n]*kWh\s+([\d,\.]+)\s+([\d,]{6,})/i);
+  if(m){
+    result.tePonta = parseBrazilianNumber(m[2]);
+    result.confidence.tePonta = 'h';
+  }
+
+  // Consumo Fora Ponta TUSD → QTD = consumoFP, TARIFA = tusdFP
+  m = text.match(/Consumo\s+Fora\s+Ponta\s+\[KWh\][^\n]*kWh\s+([\d,\.]+)\s+([\d,]{6,})/i);
+  if(m){
+    result.consumoFP = parseBrazilianNumber(m[1]);
+    result.tusdFP    = parseBrazilianNumber(m[2]);
+    result.confidence.consumoFP = 'h';
+    result.confidence.tusdFP    = 'h';
+  }
+
+  // Consumo Fora Ponta TE → TARIFA = teFP
+  m = text.match(/Cons\s+FPonta\s+TE[^\n]*kWh\s+([\d,\.]+)\s+([\d,]{6,})/i);
+  if(!m) m = text.match(/Consumo\s+Fora\s+Ponta[^\n]*[-–]\s*TE[^\n]*kWh\s+([\d,\.]+)\s+([\d,]{6,})/i);
+  if(m){
+    result.teFP = parseBrazilianNumber(m[2]);
+    result.confidence.teFP = 'h';
+  }
+
+  // Demanda: CPFL usa 2 linhas "Demanda [kW] - TUSD"
+  // Linha com 18% ICMS = demanda registrada cobrada
+  // Linha sem ICMS (desconto/isenção parcial)
+  // Estratégia: pegar todas as ocorrências e usar a que tem ICMS (18,00)
+  var demMatches = [];
+  var re_dem = /Demanda\s+\[kW\][^\n]*kW\s+([\d,\.]+)\s+([\d,]{6,})/gi;
+  var dm;
+  while((dm = re_dem.exec(text)) !== null){
+    var lineCtx = text.substring(dm.index, dm.index + 120);
+    var hasICMS = /18,00|18\.00/.test(lineCtx);
+    demMatches.push({
+      qtd: parseBrazilianNumber(dm[1]),
+      tarifa: parseBrazilianNumber(dm[2]),
+      hasICMS: hasICMS
+    });
+  }
+
+  if(demMatches.length > 0){
+    // Preferir a linha com ICMS (demanda registrada cobrada)
+    var demComICMS = demMatches.filter(function(d){return d.hasICMS;});
+    var demUsada = demComICMS.length > 0 ? demComICMS[0] : demMatches[demMatches.length-1];
+    result.demandaRegistrada = demUsada.qtd;
+    result.tarifaDemTUSD     = demUsada.tarifa;
+    result.confidence.demandaRegistrada = 'h';
+    result.confidence.tarifaDemTUSD     = 'h';
+  }
+
+  // Demanda contratada: "Demanda kW 90" (Grandezas contratadas)
+  m = text.match(/Demanda\s+kW\s+(\d+)/i);
+  if(m){
+    result.demandaContratada = parseBrazilianNumber(m[1]);
+    result.confidence.demandaContratada = 'h';
+  }
+
+  // Tarifas totais
+  if(result.tePonta && result.tusdPonta)
+    result.tarifaPonta = parseFloat((result.tePonta + result.tusdPonta).toFixed(6));
+  if(result.teFP && result.tusdFP)
+    result.tarifaFP = parseFloat((result.teFP + result.tusdFP).toFixed(6));
+
+  // Tarifa ultrapassagem = TUSD * 2
+  if(result.tarifaDemTUSD)
+    result.tarifaUltrapassagem = parseFloat((result.tarifaDemTUSD * 2).toFixed(6));
+
+  // Verificar se temos os campos obrigatórios
+  var required = ['consumoPonta','consumoFP','tarifaPonta','tarifaFP','demandaRegistrada','tarifaDemTUSD'];
+  var found = required.filter(function(k){return result[k]!=null && !isNaN(result[k]);}).length;
+
+  return {ok: found >= 4, result: result, format:'CPFL'};
+}
+
+function extractNeoenergiaElektroTable(text){
+  var result = {
+    consumoPonta:null, consumoFP:null,
+    tePonta:null, tusdPonta:null, tarifaPonta:null,
+    teFP:null, tusdFP:null, tarifaFP:null,
+    demandaRegistrada:null, demandaUltrapassada:null,
+    tarifaDemTUSD:null, tarifaUltrapassagem:null,
+    confidence:{}
+  };
+
+  // ── FORMATO A: linha inline (LABEL kWh QTD TARIFA ...) ──────────
+  var re_A = [
+    [/CONSUMO\s+PONTA\s+TE\s+kWh\s+([\d\.]+)\s+([\d,]{4,})/i,         'consumoPonta', 'tePonta'],
+    [/CONSUMO\s+PONTA\s+TUSD\s+kWh\s+([\d\.]+)\s+([\d,]{4,})/i,       null,           'tusdPonta'],
+    [/CONSUMO\s+FORA\s+PONTA\s+TE\s+kWh\s+([\d\.]+)\s+([\d,]{4,})/i,  'consumoFP',    'teFP'],
+    [/CONSUMO\s+FORA\s+PONTA\s+TUSD\s+kWh\s+([\d\.]+)\s+([\d,]{4,})/i,null,           'tusdFP'],
+    [/DEMANDA\s+TUSD\s+kW\s+([\d,\.]+)\s+([\d,]{4,})/i,                'demandaRegistrada','tarifaDemTUSD'],
+    [/DEMANDA\s+ULTRAP[\.\s]*TUSD\s+kW\s+([\d,\.]+)\s+([\d,]{4,})/i,  'demandaUltrapassada','tarifaUltrapassagem']
+  ];
+  var foundA = 0;
+  re_A.forEach(function(item){
+    var pat=item[0], f1=item[1], f2=item[2];
+    var m = text.match(pat);
+    if(m){
+      if(f1){ result[f1]=parseBrazilianNumber(m[1]); if(result[f1]){result.confidence[f1]='h';foundA++;} }
+      if(f2 && m[2]){ result[f2]=parseBrazilianNumber(m[2]); if(result[f2]) result.confidence[f2]='h'; }
+    }
+  });
+  if(foundA >= 4){
+    if(result.tePonta && result.tusdPonta)
+      result.tarifaPonta = parseFloat((result.tePonta + result.tusdPonta).toFixed(6));
+    if(result.teFP && result.tusdFP)
+      result.tarifaFP = parseFloat((result.teFP + result.tusdFP).toFixed(6));
+    return {ok:true, result:result, format:'A'};
+  }
+
+  // ── FORMATO B: bloco (labels separados, depois quantidades, depois tarifas) ──
+  var lines = text.replace(/\r/g,'').split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+
+  var LBLS = [
+    'CONSUMO PONTA TE',
+    'CONSUMO PONTA TUSD',
+    'CONSUMO FORA PONTA TE',
+    'CONSUMO FORA PONTA TUSD',
+    'DEMANDA TUSD',
+    'DEMANDA ULTRAP'
+  ];
+
+  // Detectar se os 6 labels aparecem em linhas separadas (sem dados na mesma linha)
+  var labelIdxs = [];
+  for(var i=0;i<lines.length;i++){
+    for(var li=0;li<LBLS.length;li++){
+      if(new RegExp('^'+LBLS[li].replace('.','[.\\s]?'),'i').test(lines[i])){
+        // Confirmar que não há números na mesma linha (Formato B puro)
+        if(!/\d{3,}/.test(lines[i])){
+          labelIdxs.push(i);
+          break;
+        }
+      }
+    }
+  }
+
+  if(labelIdxs.length >= 6){
+    var start = labelIdxs[0];
+    // Fim do bloco: linha com ICMS ou Demanda Todos
+    var end = lines.length;
+    for(var j=start;j<Math.min(start+60,lines.length);j++){
+      if(/\bICMS\b/i.test(lines[j])){ end=j; break; }
+    }
+
+    var onlyNums = [];
+    for(var k=start;k<end;k++){
+      var line = lines[k];
+      // Pular labels e unidades
+      var isLabel = LBLS.some(function(lbl){ return new RegExp('^'+lbl,'i').test(line); });
+      if(isLabel || line==='kWh' || line==='kW') continue;
+      // Só aceitar linhas que parecem números BR
+      if(/^[\d\.,\s]+$/.test(line)){
+        var v = parseBrazilianNumber(line);
+        if(v !== null) onlyNums.push(v);
+      }
+    }
+
+    // Precisa de pelo menos 12 números: 6 qtds + 6 tarifas
+    if(onlyNums.length >= 12){
+      var qtds    = onlyNums.slice(0,6);
+      var tarifas = onlyNums.slice(6,12);
+      result.consumoPonta        = qtds[0];
+      result.consumoFP           = qtds[2];
+      result.demandaRegistrada   = qtds[4];
+      result.demandaUltrapassada = qtds[5];
+      result.tePonta             = tarifas[0];
+      result.tusdPonta           = tarifas[1];
+      result.teFP                = tarifas[2];
+      result.tusdFP              = tarifas[3];
+      result.tarifaDemTUSD       = tarifas[4];
+      result.tarifaUltrapassagem = tarifas[5];
+      result.tarifaPonta = parseFloat((tarifas[0]+tarifas[1]).toFixed(6));
+      result.tarifaFP    = parseFloat((tarifas[2]+tarifas[3]).toFixed(6));
+      ['consumoPonta','consumoFP','demandaRegistrada','demandaUltrapassada',
+       'tePonta','tusdPonta','teFP','tusdFP','tarifaDemTUSD','tarifaUltrapassagem'].forEach(function(k){
+        result.confidence[k]='h';
+      });
+      return {ok:true, result:result, format:'B'};
+    }
+  }
+
+  return {ok:false, result:result, format:null};
+  // ── FORMATO C: coluna QUANT. / Quant. Registrado (demonstrativo pág 2) ──
+  // Ex: header "QUANT." ou "Quant. Registrado" seguido de valores na coluna
+  var quantHeader = /QUANT[\.\s]|Quant[\.\s]+Registrado/i;
+  var headerLine = -1;
+  for(var qi=0; qi<lines.length; qi++){
+    if(quantHeader.test(lines[qi])){ headerLine = qi; break; }
+  }
+  if(headerLine >= 0){
+    // Após o header, coletar os valores numéricos da coluna
+    var colNums = [];
+    for(var qi2=headerLine+1; qi2<Math.min(headerLine+20, lines.length); qi2++){
+      var v2 = parseBrazilianNumber(lines[qi2]);
+      if(v2 !== null && /^[\d,\.]+$/.test(lines[qi2].trim())) colNums.push(v2);
+      else if(colNums.length > 0) break; // para quando sai dos números
+    }
+    // Detectar contexto: se temos labels antes do header, mapear por ordem
+    // Ordem padrão Neoenergia: CONSUMO PONTA, CONSUMO FP, DEMANDA, DEMANDA ULTRAP
+    if(colNums.length >= 2){
+      // Verificar labels acima do header para confirmar ordem
+      var labelsBefore = lines.slice(Math.max(0,headerLine-10), headerLine);
+      var hasCPonta = labelsBefore.some(function(l){return /CONSUMO PONTA TE/i.test(l);});
+      var hasCFP    = labelsBefore.some(function(l){return /CONSUMO FORA PONTA TE/i.test(l);});
+      var hasDem    = labelsBefore.some(function(l){return /DEMANDA TUSD/i.test(l);});
+      if(hasCPonta || hasCFP || hasDem){
+        // Mapeamento posicional: igual ao Formato B
+        if(colNums[0] > 100) result.consumoPonta = colNums[0];
+        if(colNums.length>2 && colNums[2] > 100) result.consumoFP = colNums[2];
+        if(colNums.length>4) result.demandaRegistrada = colNums[4];
+        if(colNums.length>5) result.demandaUltrapassada = colNums[5];
+        ['consumoPonta','consumoFP','demandaRegistrada','demandaUltrapassada'].forEach(function(k){
+          if(result[k]!=null) result.confidence[k]='m';
+        });
+        // Tarifas precisarão vir de outra estratégia — marcar como pendente
+        if(result.consumoPonta || result.consumoFP)
+          return {ok: false, result:result, format:'C-partial'};
+      }
+    }
+  }
+
+  return {ok:false, result:result, format:null};
+}
+
+function extractInvoiceItemsTable(text){
+  // Tentar primeiro CPFL Paulista (detecta automaticamente)
+  var cpfl = extractCPFLPaulistaTable(text);
+  if(cpfl && cpfl.ok) return cpfl.result;
+
+  // Tentar Neoenergia/Elektro (Formato A ou B)
+  var neo = extractNeoenergiaElektroTable(text);
+  if(neo && neo.ok) return neo.result;
+
+  // Aproveitar resultado parcial do Formato C (coluna QUANT.) se disponível
+  if(neo && neo.result && (neo.result.consumoPonta || neo.result.consumoFP)){
+    var partial = neo.result;
+    // Complementar com tarifas via regex simples
+    var m2;
+    m2 = text.match(/CONSUMO\s+PONTA\s+TE[\s\S]{0,200}?(0[,\.]\d{5,})/i);
+    if(m2) partial.tePonta = parseBrazilianNumber(m2[1]);
+    m2 = text.match(/CONSUMO\s+PONTA\s+TUSD[\s\S]{0,200}?([2-3][,\.]\d{5,})/i);
+    if(m2) partial.tusdPonta = parseBrazilianNumber(m2[1]);
+    m2 = text.match(/CONSUMO\s+FORA\s+PONTA\s+TE[\s\S]{0,200}?(0[,\.]\d{5,})/i);
+    if(m2) partial.teFP = parseBrazilianNumber(m2[1]);
+    m2 = text.match(/CONSUMO\s+FORA\s+PONTA\s+TUSD[\s\S]{0,200}?(0[,\.]\d{5,})/i);
+    if(m2) partial.tusdFP = parseBrazilianNumber(m2[1]);
+    m2 = text.match(/DEMANDA\s+TUSD[\s\S]{0,100}?(\d{2,3}[,\.]\d{5,})/i);
+    if(m2) partial.tarifaDemTUSD = parseBrazilianNumber(m2[1]);
+    if(partial.tePonta && partial.tusdPonta)
+      partial.tarifaPonta = parseFloat((partial.tePonta + partial.tusdPonta).toFixed(6));
+    if(partial.teFP && partial.tusdFP)
+      partial.tarifaFP = parseFloat((partial.teFP + partial.tusdFP).toFixed(6));
+    return partial;
+  }
+
+  // Fallback: estratégias antigas (colunas do demonstrativo, pág 2)
+  var result = {
+    consumoPonta:null, consumoFP:null,
+    tePonta:null, tusdPonta:null,
+    teFP:null, tusdFP:null,
+    demandaRegistrada:null, demandaUltrapassada:null,
+    tarifaDemTUSD:null, tarifaUltrapassagem:null,
+    confidence:{}
+  };
+
+  var flat = text.replace(/\n/g,' ');
+
+  // Formato demonstrativo pág 2: "CONSUMO PONTA TUSD 31753 84142 .12 6443"
+  var m;
+  m = flat.match(/CONSUMO\s+PONTA\s+TUSD\s+[\d\.]+\s+[\d\.]+\s+[\d\.]+\s+([\d]{4,})/i);
+  if(m){ result.consumoPonta=parseBrazilianNumber(m[1]); result.confidence.consumoPonta='m'; }
+  m = flat.match(/CONSUMO\s+FORA\s+PONTA\s+TUSD\s+[\d\.]+\s+[\d\.]+\s+[\d\.]+\s+([\d]{4,})/i);
+  if(m){ result.consumoFP=parseBrazilianNumber(m[1]); result.confidence.consumoFP='m'; }
+  m = flat.match(/DEMANDA\s+TUSD\s+[\d\.]+\s+[\d\.]+\s+[\d\.]+\s+([\d,\.]+)/i);
+  if(m){ result.demandaRegistrada=parseBrazilianNumber(m[1]); result.confidence.demandaRegistrada='m'; }
+  m = flat.match(/DEMANDA\s+ULTRAP[\.\s]*TUSD\s+[\d\.]+\s+[\d\.]+\s+[\d\.]+\s+([\d,\.]+)/i);
+  if(m){ result.demandaUltrapassada=parseBrazilianNumber(m[1]); result.confidence.demandaUltrapassada='m'; }
+
+  return result;
+}
+
+function extractDemonstrativoConsumo(text){
+  // Estratégia 2: demonstrativo de consumo (segunda página)
+  // Procura bloco com leituras e consumo
+  const result = {};
+  // Consumo da coluna CONSUMO/DEMANDA
+  const consumoBlock = text.match(/CONSUMO\s*\/\s*DEMANDA[\s\S]{0,1000}?(?=RESERVADO|BANCO|$)/i);
+  if(consumoBlock){
+    const cb = consumoBlock[0];
+    // Busca linha com 6 dígitos que representa consumo ponta
+    const nums = cb.match(/\b(\d{4,6})\b/g);
+    // Pegar valores finais da coluna (últimos antes de demanda)
+  }
+  return result;
+}
+
+function extractFromColumns(text){
+  // Estratégia 3: busca por posição relativa
+  // Quando a tabela tem labels em uma coluna e valores em outra
+  const result = {};
+  const lines = text.split('\n').map(l=>l.trim());
+
+  for(let i=0;i<lines.length;i++){
+    const l = lines[i];
+    // Consumo ponta
+    if(/^CONSUMO PONTA TE$/i.test(l) || /^CONSUMO PONTA TE\s*$/i.test(l)){
+      // Valor pode estar na mesma linha ou nas próximas
+      const nums = extractNumbersNearby(lines, i, 5);
+      if(nums.length>=2){
+        result.consumoPonta = result.consumoPonta || nums[0];
+        result.tePonta = result.tePonta || nums[1];
+      }
+    }
+    if(/^CONSUMO PONTA TUSD$/i.test(l)){
+      const nums = extractNumbersNearby(lines, i, 5);
+      if(nums.length>=2) result.tusdPonta = result.tusdPonta || nums[1];
+    }
+    if(/^CONSUMO FORA PONTA TE$/i.test(l)){
+      const nums = extractNumbersNearby(lines, i, 5);
+      if(nums.length>=2){
+        result.consumoFP = result.consumoFP || nums[0];
+        result.teFP = result.teFP || nums[1];
+      }
+    }
+    if(/^CONSUMO FORA PONTA TUSD$/i.test(l)){
+      const nums = extractNumbersNearby(lines, i, 5);
+      if(nums.length>=2) result.tusdFP = result.tusdFP || nums[1];
+    }
+    if(/^DEMANDA TUSD$/i.test(l)){
+      const nums = extractNumbersNearby(lines, i, 5);
+      if(nums.length>=2){
+        result.demandaRegistrada = result.demandaRegistrada || nums[0];
+        result.tarifaDemTUSD = result.tarifaDemTUSD || nums[1];
+      }
+    }
+    if(/DEMANDA ULTRAP/i.test(l)){
+      const nums = extractNumbersNearby(lines, i, 5);
+      if(nums.length>=2){
+        result.demandaUltrapassada = result.demandaUltrapassada || nums[0];
+        result.tarifaUltrapassagem = result.tarifaUltrapassagem || nums[1];
+      }
+    }
+  }
+  return result;
+}
+
+function extractNumbersNearby(lines, idx, range){
+  const result = [];
+  for(let i=idx;i<=Math.min(idx+range,lines.length-1);i++){
+    const nums = lines[i].match(/[\d\.]+,\d{2,6}/g)||lines[i].match(/\d{3,6}/g)||[];
+    nums.forEach(n=>{
+      const v = parseBrazilianNumber(n);
+      if(v!==null && v>0) result.push(v);
+    });
+    if(result.length>=3) break;
+  }
+  return result;
+}
+
+function validateExtractedData(dados){
+  const issues = [];
+  const required = ['consumoPonta','consumoFP','tarifaPonta','tarifaFP','demandaContratada','demandaRegistrada','tarifaDemTUSD'];
+  required.forEach(k=>{
+    if(dados[k]==null||isNaN(dados[k])) issues.push({field:k,level:'err',msg:'Campo obrigatório não encontrado'});
+  });
+  if(dados.tarifaPonta && dados.tarifaFP && dados.tarifaPonta <= dados.tarifaFP)
+    issues.push({field:'tarifaPonta',level:'warn',msg:'Delta tarifário ≤ 0: arbitragem pode não ser viável'});
+  if(dados.demandaRegistrada && dados.demandaContratada && dados.demandaUltrapassada){
+    const calc = dados.demandaRegistrada - dados.demandaContratada;
+    const diff = Math.abs(calc - dados.demandaUltrapassada);
+    if(diff > 0.5) issues.push({field:'demandaUltrapassada',level:'warn',msg:`Ultrapassagem calculada (${fN(calc,2)}) difere da fatura (${fN(dados.demandaUltrapassada,2)})`});
+  }
+  return issues;
+}
+
+async function extrairDadosPDF(text, nome){
+  rawPdfText = text;
+  const flat = text.replace(/\n/g,' ').replace(/\s+/g,' ');
+
+  // Tentar estratégia 1 (tabela inline)
+  let ext = extractInvoiceItemsTable(text);
+  // Complementar com estratégia 3 (colunas)
+  const col = extractFromColumns(text);
+  Object.keys(col).forEach(k=>{ if(!ext[k] && col[k]) ext[k]=col[k]; });
+
+  // Calcular tarifas totais
+  const tePonta = ext.tePonta;
+  const tusdPonta = ext.tusdPonta;
+  const teFP = ext.teFP;
+  const tusdFP = ext.tusdFP;
+  const tarifaPonta = (tePonta&&tusdPonta) ? parseFloat((tePonta+tusdPonta).toFixed(6)) : null;
+  const tarifaFP = (teFP&&tusdFP) ? parseFloat((teFP+tusdFP).toFixed(6)) : null;
+
+  const dados = {
+    id: 'f'+Date.now(),
+    nome: nome,
+    mes: extractReferenceMonth(text) || nome.replace('.pdf',''),
+    vencimento: extractVencimento(flat),
+    totalFatura: extractInvoiceTotal(flat),
+    diasFatura: extractBillingDays(flat),
+    consumoPonta: ext.consumoPonta,
+    consumoFP: ext.consumoFP,
+    tePonta: tePonta,
+    tusdPonta: tusdPonta,
+    tarifaPonta: tarifaPonta,
+    teFP: teFP,
+    tusdFP: tusdFP,
+    tarifaFP: tarifaFP,
+    demandaContratada: extractContractedDemand(text),
+    demandaRegistrada: ext.demandaRegistrada,
+    demandaUltrapassada: ext.demandaUltrapassada,
+    tarifaDemTUSD: ext.tarifaDemTUSD,
+    tarifaUltrapassagem: ext.tarifaUltrapassagem,
+    confidence: ext.confidence || {},
+    manualConfirmed: false,
+    faltando: []
+  };
+
+  // Calcular faltando
+  const required = ['consumoPonta','consumoFP','tarifaPonta','tarifaFP','demandaContratada','demandaRegistrada','tarifaDemTUSD'];
+  dados.faltando = required.filter(k=>dados[k]==null||isNaN(dados[k]));
+
+  // Score de confiança global
+  const totalFields = 7;
+  const found = totalFields - dados.faltando.length;
+  dados.confidenceScore = Math.round((found/totalFields)*100);
+
+  return dados;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UPLOAD
+═══════════════════════════════════════════════════════════ */
+const dz=document.getElementById('dropzone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');handleFiles(e.dataTransfer.files)});
+document.getElementById('file-input').addEventListener('change',e=>handleFiles(e.target.files));
+
+async function handleFiles(files){
+  for(const f of files) if(f.type==='application/pdf') await processPDF(f);
+}
+
+async function processPDF(file){
+  const proc=document.getElementById('proc');
+  proc.style.display='flex';
+  document.getElementById('proc-msg').textContent='Lendo: '+file.name+'...';
+  try{
+    const ab = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({data: new Uint8Array(ab)});
+    const pdf = await loadingTask.promise;
+    let text = '';
+    for(let i=1; i<=pdf.numPages; i++){
+      const pg = await pdf.getPage(i);
+      const tc = await pg.getTextContent();
+      const items = tc.items;
+      let lastY = null;
+      for(const item of items){
+        const y = item.transform ? item.transform[5] : 0;
+        if(lastY !== null && Math.abs(y - lastY) > 5) text += '\n';
+        text += (item.str || '') + ' ';
+        lastY = y;
+      }
+      text += '\n\n';
+    }
+    if(!text.trim()){
+      throw new Error('PDF sem texto extraível. Pode ser um PDF escaneado (imagem).');
+    }
+    const dados = await extrairDadosPDF(text, file.name);
+    mostrarConferencia(dados);
+  } catch(e){
+    console.error('Erro processPDF:', e);
+    toast('Erro ao ler PDF: '+e.message+' — Preencha manualmente.','err',6000);
+    const dados = {
+      id:'f'+Date.now(), nome:file.name,
+      mes:file.name.replace(/\.pdf$/i,'').replace(/_/g,' '),
+      consumoPonta:null, consumoFP:null, tarifaPonta:null, tarifaFP:null,
+      demandaContratada:null, demandaRegistrada:null, tarifaDemTUSD:null,
+      tePonta:null, tusdPonta:null, teFP:null, tusdFP:null,
+      demandaUltrapassada:null, tarifaUltrapassagem:null,
+      totalFatura:null, diasFatura:null, vencimento:null,
+      faltando:['consumoPonta','consumoFP','tarifaPonta','tarifaFP','demandaContratada','demandaRegistrada','tarifaDemTUSD'],
+      confidence:{}, confidenceScore:0, manualConfirmed:false
+    };
+    mostrarConferencia(dados);
+  } finally {
+    proc.style.display='none';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL CONFERÊNCIA
+═══════════════════════════════════════════════════════════ */
+function mostrarConferencia(dados){
+  confPending = dados;
+  document.getElementById('conf-sub').textContent =
+    dados.confidenceScore!=null
+      ? 'Confiança da leitura: '+dados.confidenceScore+'% — Verifique os campos destacados'
+      : 'Verifique e corrija os dados antes de confirmar';
+
+  // Confidence badge global
+  let scoreLabel='', scoreCls='';
+  if(dados.confidenceScore>=80){scoreLabel='Alta confiança';scoreCls='cbadge-h';}
+  else if(dados.confidenceScore>=50){scoreLabel='Média confiança';scoreCls='cbadge-m';}
+  else{scoreLabel='Baixa confiança';scoreCls='cbadge-l';}
+
+  document.getElementById('conf-confidence').innerHTML =
+    '<span class="cbadge '+scoreCls+'">'+scoreLabel+' ('+dados.confidenceScore+'%)</span> '+
+    (dados.faltando.length ? '<span style="color:var(--red);font-size:11px">'+dados.faltando.length+' campo(s) não encontrado(s)</span>' : '<span style="color:var(--green);font-size:11px">Todos os campos obrigatórios encontrados</span>');
+
+  // Alertas
+  const issues = validateExtractedData(dados);
+  const alertsEl = document.getElementById('conf-alerts');
+  alertsEl.innerHTML = issues.map(iss=>
+    '<div class="alert alert-'+(iss.level==='err'?'err':'warn')+'">'+
+    '<span>'+iss.msg+'</span></div>'
+  ).join('');
+
+  // Formulário
+  const campos = [
+    {k:'mes',l:'Mês de referência',t:'text'},
+    {k:'vencimento',l:'Vencimento',t:'text',opt:true},
+    {k:'totalFatura',l:'Total da fatura (R$)',t:'number',opt:true},
+    {k:'diasFatura',l:'Dias do período',t:'number',opt:true},
+    {k:'consumoPonta',l:'Consumo ponta (kWh)',t:'number'},
+    {k:'consumoFP',l:'Consumo fora ponta (kWh)',t:'number'},
+    {k:'tePonta',l:'TE ponta (R$/kWh)',t:'number',opt:true},
+    {k:'tusdPonta',l:'TUSD ponta (R$/kWh)',t:'number',opt:true},
+    {k:'tarifaPonta',l:'Tarifa total ponta (R$/kWh)',t:'number'},
+    {k:'teFP',l:'TE fora ponta (R$/kWh)',t:'number',opt:true},
+    {k:'tusdFP',l:'TUSD fora ponta (R$/kWh)',t:'number',opt:true},
+    {k:'tarifaFP',l:'Tarifa total fora ponta (R$/kWh)',t:'number'},
+    {k:'demandaContratada',l:'Demanda contratada (kW)',t:'number'},
+    {k:'demandaRegistrada',l:'Demanda registrada (kW)',t:'number'},
+    {k:'demandaUltrapassada',l:'Demanda ultrapassada (kW)',t:'number',opt:true},
+    {k:'tarifaDemTUSD',l:'Tarifa demanda TUSD (R$/kW)',t:'number'},
+    {k:'tarifaUltrapassagem',l:'Tarifa ultrapassagem (R$/kW)',t:'number',opt:true},
+  ];
+
+  document.getElementById('conf-form').innerHTML = campos.map(c=>{
+    const v = dados[c.k]!=null ? dados[c.k] : '';
+    const isMissing = dados.faltando && dados.faltando.includes(c.k);
+    const conf = dados.confidence && dados.confidence[c.k];
+    const cls = isMissing ? 'field-err' : (conf==='h'?'field-ok':conf==='m'?'field-warn':'');
+    const confBadge = conf ? '<span class="cbadge cbadge-'+conf+'">'+(conf==='h'?'Alta':conf==='m'?'Média':'Baixa')+'</span>' : (c.opt?'<span style="font-size:10px;color:var(--text3)">opcional</span>':'');
+    return '<div class="fg '+cls+'">' +
+      '<label>'+c.l+' '+confBadge+'</label>' +
+      '<input type="'+c.t+'" id="cf_'+c.k+'" value="'+v+'" '+(c.k==='mes'?'':'step="any"')+'>' +
+      '</div>';
+  }).join('');
+
+  // Auto-calcular tarifa total ao mudar TE/TUSD
+  ['tePonta','tusdPonta','teFP','tusdFP'].forEach(k=>{
+    const el=document.getElementById('cf_'+k);
+    if(el) el.addEventListener('input', calcularTarifasTotaisConf);
+  });
+
+  document.getElementById('modal-conf').style.display='flex';
+}
+
+function calcularTarifasTotaisConf(){
+  const te = parseBrazilianNumber(document.getElementById('cf_tePonta')?.value);
+  const tusd = parseBrazilianNumber(document.getElementById('cf_tusdPonta')?.value);
+  if(te&&tusd){ const el=document.getElementById('cf_tarifaPonta'); if(el&&!el.dataset.manual) el.value=(te+tusd).toFixed(6); }
+  const te2 = parseBrazilianNumber(document.getElementById('cf_teFP')?.value);
+  const tusd2 = parseBrazilianNumber(document.getElementById('cf_tusdFP')?.value);
+  if(te2&&tusd2){ const el=document.getElementById('cf_tarifaFP'); if(el&&!el.dataset.manual) el.value=(te2+tusd2).toFixed(6); }
+}
+
+function fecharConf(){
+  document.getElementById('modal-conf').style.display='none';
+  confPending=null; rawPdfText='';
+}
+
+function verTextoPDF(){
+  const el=document.getElementById('conf-text-viewer');
+  if(el.style.display==='none'){
+    el.style.display='block';
+    el.innerHTML='<div class="text-viewer">'+rawPdfText.replace(/</g,'&lt;').slice(0,3000)+(rawPdfText.length>3000?'\n...(truncado)':'')+'</div>';
+  } else el.style.display='none';
+}
+
+function confirmarFatura(){
+  if(!confPending) return;
+  // Ler todos os campos do formulário
+  const campos = ['mes','vencimento','totalFatura','diasFatura','consumoPonta','consumoFP',
+    'tePonta','tusdPonta','tarifaPonta','teFP','tusdFP','tarifaFP',
+    'demandaContratada','demandaRegistrada','demandaUltrapassada','tarifaDemTUSD','tarifaUltrapassagem'];
+  const dados = Object.assign({}, confPending);
+  campos.forEach(k=>{
+    const el=document.getElementById('cf_'+k); if(!el) return;
+    const v=el.value.trim();
+    if(k==='mes'||k==='vencimento') dados[k]=v||dados[k];
+    else { const n=parseBrazilianNumber(v); if(n!==null) dados[k]=n; else if(v==='') dados[k]=null; }
+  });
+  // Recalcular tarifas totais se necessário
+  if(dados.tePonta && dados.tusdPonta && !dados.tarifaPonta)
+    dados.tarifaPonta = parseFloat((dados.tePonta+dados.tusdPonta).toFixed(6));
+  if(dados.teFP && dados.tusdFP && !dados.tarifaFP)
+    dados.tarifaFP = parseFloat((dados.teFP+dados.tusdFP).toFixed(6));
+
+  const required = ['consumoPonta','consumoFP','tarifaPonta','tarifaFP','demandaContratada','demandaRegistrada','tarifaDemTUSD'];
+  dados.faltando = required.filter(k=>dados[k]==null||isNaN(dados[k]));
+  dados.manualConfirmed = true;
+
+  STATE.faturas.push(dados);
+  if(STATE.faturas.length===1) STATE.activeTab=dados.id;
+  document.getElementById('empty-state').style.display='none';
+  fecharConf();
+  salvarEstudo();
+  renderUI();
+  toast('PDF lido com sucesso: '+dados.mes, 'ok');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL EDITAR FATURA
+═══════════════════════════════════════════════════════════ */
+function abrirEdit(id){
+  editId = id;
+  const f = STATE.faturas.find(x=>x.id===id);
+  if(!f) return;
+  document.getElementById('edit-sub').textContent = 'Editando: '+f.mes;
+  const campos = [
+    {k:'mes',l:'Mês de referência',t:'text'},
+    {k:'consumoPonta',l:'Consumo ponta (kWh)',t:'number'},
+    {k:'consumoFP',l:'Consumo fora ponta (kWh)',t:'number'},
+    {k:'tePonta',l:'TE ponta (R$/kWh)',t:'number',opt:true},
+    {k:'tusdPonta',l:'TUSD ponta (R$/kWh)',t:'number',opt:true},
+    {k:'tarifaPonta',l:'Tarifa total ponta (R$/kWh)',t:'number'},
+    {k:'teFP',l:'TE fora ponta (R$/kWh)',t:'number',opt:true},
+    {k:'tusdFP',l:'TUSD fora ponta (R$/kWh)',t:'number',opt:true},
+    {k:'tarifaFP',l:'Tarifa total fora ponta (R$/kWh)',t:'number'},
+    {k:'demandaContratada',l:'Demanda contratada (kW)',t:'number'},
+    {k:'demandaRegistrada',l:'Demanda registrada (kW)',t:'number'},
+    {k:'demandaUltrapassada',l:'Demanda ultrapassada (kW)',t:'number',opt:true},
+    {k:'tarifaDemTUSD',l:'Tarifa demanda TUSD (R$/kW)',t:'number'},
+    {k:'tarifaUltrapassagem',l:'Tarifa ultrapassagem (R$/kW)',t:'number',opt:true},
+    {k:'totalFatura',l:'Total da fatura (R$)',t:'number',opt:true},
+    {k:'diasFatura',l:'Dias do período',t:'number',opt:true},
+  ];
+  document.getElementById('edit-form').innerHTML = campos.map(c=>{
+    const v = f[c.k]!=null ? f[c.k] : '';
+    return '<div class="fg"><label>'+c.l+(c.opt?' <span style="font-size:10px;color:var(--text3)">opcional</span>':'')+'</label>'+
+      '<input type="'+c.t+'" id="ef_'+c.k+'" value="'+v+'" '+(c.k==='mes'?'':'step="any"')+'></div>';
+  }).join('');
+  document.getElementById('modal-edit').style.display='flex';
+}
+
+function fecharEdit(){
+  document.getElementById('modal-edit').style.display='none';
+  editId=null;
+}
+
+function salvarEdit(){
+  if(!editId) return;
+  const f = STATE.faturas.find(x=>x.id===editId);
+  if(!f) return;
+  const campos=['mes','consumoPonta','consumoFP','tePonta','tusdPonta','tarifaPonta',
+    'teFP','tusdFP','tarifaFP','demandaContratada','demandaRegistrada',
+    'demandaUltrapassada','tarifaDemTUSD','tarifaUltrapassagem','totalFatura','diasFatura'];
+  campos.forEach(k=>{
+    const el=document.getElementById('ef_'+k); if(!el) return;
+    const v=el.value.trim();
+    if(k==='mes') f[k]=v||f[k];
+    else { const n=parseBrazilianNumber(v); if(n!==null) f[k]=n; else if(v==='') f[k]=null; }
+  });
+  if(f.tePonta && f.tusdPonta) f.tarifaPonta=parseFloat((f.tePonta+f.tusdPonta).toFixed(6));
+  if(f.teFP && f.tusdFP) f.tarifaFP=parseFloat((f.teFP+f.tusdFP).toFixed(6));
+  const required=['consumoPonta','consumoFP','tarifaPonta','tarifaFP','demandaContratada','demandaRegistrada','tarifaDemTUSD'];
+  f.faltando=required.filter(k=>f[k]==null||isNaN(f[k]));
+  fecharEdit();
+  salvarEstudo();
+  renderUI();
+  toast('Dados alterados e recalculados','ok');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DEMO
+═══════════════════════════════════════════════════════════ */
+function carregarDemo(){
+  const fev = {
+    id:'demo-fev', nome:'Fevereiro_2026.pdf', mes:'Fevereiro/2026',
+    vencimento:'17/02/2026', totalFatura:52194.74, diasFatura:32,
+    consumoPonta:6512, consumoFP:44764,
+    tePonta:0.623113, tusdPonta:2.496253, tarifaPonta:3.119366,
+    teFP:0.385934, tusdFP:0.179805, tarifaFP:0.565739,
+    demandaContratada:170, demandaRegistrada:205.16,
+    demandaUltrapassada:35.16, tarifaDemTUSD:37.136966,
+    tarifaUltrapassagem:74.273932, manualConfirmed:true, faltando:[],
+    confidence:{consumoPonta:'h',consumoFP:'h',tePonta:'h',tusdPonta:'h',teFP:'h',tusdFP:'h',demandaRegistrada:'h',tarifaDemTUSD:'h'},
+    confidenceScore:100
+  };
+  const mar = {
+    id:'demo-mar', nome:'Marco_2026.pdf', mes:'Março/2026',
+    vencimento:'16/03/2026', totalFatura:58836.89, diasFatura:29,
+    consumoPonta:6443, consumoFP:49658,
+    tePonta:0.612036, tusdPonta:2.451887, tarifaPonta:3.063923,
+    teFP:0.379075, tusdFP:0.176609, tarifaFP:0.555684,
+    demandaContratada:170, demandaRegistrada:218.44,
+    demandaUltrapassada:48.44, tarifaDemTUSD:36.476927,
+    tarifaUltrapassagem:72.953854, manualConfirmed:true, faltando:[],
+    confidence:{consumoPonta:'h',consumoFP:'h',tePonta:'h',tusdPonta:'h',teFP:'h',tusdFP:'h',demandaRegistrada:'h',tarifaDemTUSD:'h'},
+    confidenceScore:100
+  };
+  STATE.faturas=[fev,mar]; STATE.activeTab='demo-fev';
+  document.getElementById('empty-state').style.display='none';
+  salvarEstudo(); renderUI();
+  toast('Dados de demonstração carregados','ok');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CÁLCULO
+═══════════════════════════════════════════════════════════ */
+function getP(){
+  // gv: se campo vazio usa default; se preenchido com 0 respeita o 0
+  function gv(id,def){
+    var el=document.getElementById(id);
+    var v=parseFloat(el.value);
+    return (el.value.trim()===''||isNaN(v)) ? def : v;
+  }
+  function gvi(id,def){
+    var el=document.getElementById(id);
+    var v=parseInt(el.value);
+    return (el.value.trim()===''||isNaN(v)) ? def : v;
+  }
+  return{
+    eta_chg: gv('eta_chg',95)/100,
+    eta_dis: gv('eta_dis',95)/100,
+    dod:     gv('dod',90)/100,
+    eaux:    gv('eaux',10),
+    ovb:     gv('ovb',80)/100,
+    aug:     gv('aug',90)/100,
+    frac:    gv('frac',70)/100,
+    dias:    gvi('dias',22),
+    hponta:  gv('hponta',3),
+    pbkp:    gv('pbkp',0),
+    tbkp:    gv('tbkp',0.5),
+    capex:   gv('capex',0)
+  };
+}
+
+function calcMes(f,p){
+  if(!f.manualConfirmed || f.faltando.length>0) return null;
+  const alerts = [];
+  const delta = f.tarifaPonta - f.tarifaFP;
+  if(delta<=0) alerts.push({level:'warn',msg:'Delta tarifário ≤ 0: arbitragem não é viável neste mês'});
+
+  const ePontaDia = f.consumoPonta / p.dias;
+  const eEnt = ePontaDia * p.frac;
+  const rte = p.eta_chg * p.eta_dis;
+  const eGridIn = eEnt / rte + p.eaux;
+  const eNomOvb = eEnt / (p.eta_dis * p.dod * p.ovb);
+  const eNomAug = eEnt / (p.eta_dis * p.dod * p.aug);
+  const ecoDia = delta * eEnt - f.tarifaFP * eGridIn;
+  const ecoMes = ecoDia * p.dias;
+  if(ecoDia<0) alerts.push({level:'warn',msg:'Economia diária negativa: custo de recarga supera ganho de arbitragem'});
+
+  const tarifaUltra = f.tarifaUltrapassagem || (f.tarifaDemTUSD * 2);
+
+  // Demanda ultrapassada: usa valor da fatura se disponível,
+  // senão calcula automaticamente como max(0, registrada - contratada)
+  const excedenteFatura = (f.demandaUltrapassada != null && !isNaN(f.demandaUltrapassada))
+    ? f.demandaUltrapassada
+    : null;
+  const excedenteCalc = Math.max(0, (f.demandaRegistrada||0) - (f.demandaContratada||0));
+  const excedente = excedenteFatura !== null ? excedenteFatura : excedenteCalc;
+
+  // Alerta se divergência > 0.5 kW entre valor da fatura e cálculo
+  if(excedenteFatura !== null && Math.abs(excedenteFatura - excedenteCalc) > 0.5)
+    alerts.push({level:'warn',msg:`Ultrapassagem da fatura (${fN(excedenteFatura,2)} kW) difere do cálculo (${fN(excedenteCalc,2)} kW = ${fN(f.demandaRegistrada,2)} − ${fN(f.demandaContratada,0)})`});
+
+  const ecoPeak = excedente > 0 ? excedente * tarifaUltra : 0;
+
+  const eEntBkp = p.pbkp * p.tbkp;
+  const eNomBkpOvb = eEntBkp / (p.eta_dis * p.dod * p.ovb);
+  const eNomBkpAug = eEntBkp / (p.eta_dis * p.dod * p.aug);
+  const pcsArb = eEnt / p.hponta;
+  const pcsFinal = Math.max(pcsArb, p.pbkp);
+  const eFinOvb = Math.max(eNomOvb, eNomBkpOvb);
+  const eFinAug = Math.max(eNomAug, eNomBkpAug);
+  const ecoTotal = ecoMes + ecoPeak;
+
+  // C-rate correto: potência nominal / armazenamento (ambas as estratégias)
+  const cRateOvb = pcsFinal / eFinOvb;
+  const cRateAug = pcsFinal / eFinAug;
+  if(cRateOvb > 1.0 || cRateAug > 1.0)
+    alerts.push({level:'warn',msg:`C-rate elevado — Overbuild: ${fN(cRateOvb,2)}C | Augmentation: ${fN(cRateAug,2)}C. Verificar especificação da célula.`});
+
+  // Verificar dias fatura vs dias úteis configurados
+  if(f.diasFatura && Math.abs(f.diasFatura - p.dias) > 3)
+    alerts.push({level:'info',msg:`Dias da fatura (${f.diasFatura}) difere dos dias úteis configurados (${p.dias})`});
+
+  return{
+    delta,ePontaDia,eEnt,rte,eGridIn,eNomOvb,eNomAug,
+    ecoDia,ecoMes,ecoPeak,ecoTotal,tarifaUltra,
+    excedente,excedenteFatura,excedenteCalc,
+    eEntBkp,eNomBkpOvb,eNomBkpAug,pcsArb,pcsBkp:p.pbkp,
+    pcsFinal,eFinOvb,eFinAug,cRateOvb,cRateAug,alerts
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FORMATAÇÃO
+═══════════════════════════════════════════════════════════ */
+const fB=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fN=(v,d=2)=>v.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fK=v=>v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════════════════ */
+function renderUI(){
+  document.getElementById('badge-n').textContent = STATE.faturas.length;
+  const has = STATE.faturas.length > 0;
+  document.getElementById('tabs-wrap').style.display = has ? 'flex' : 'none';
+  document.getElementById('export-bar').style.display = has ? 'flex' : 'none';
+  renderTabs(); renderContent();
+}
+
+function renderTabs(){
+  const bar = document.getElementById('tabs-bar'); bar.innerHTML='';
+  STATE.faturas.forEach(f=>{
+    const wrap=document.createElement('div'); wrap.className='tabwrap';
+    const btn=document.createElement('button');
+    btn.className='tab'+(f.id===STATE.activeTab?' active':'');
+    const ok = f.manualConfirmed && !f.faltando.length;
+    btn.textContent = f.mes + (ok?'':' ⚠');
+    btn.onclick=()=>setActiveTab(f.id);
+    const del=document.createElement('button');
+    del.className='tabdel'; del.innerHTML='✕';
+    del.onclick=e=>{e.stopPropagation();confirmarDelete(f.id);};
+    wrap.appendChild(btn); wrap.appendChild(del); bar.appendChild(wrap);
+  });
+  if(STATE.faturas.length>1){
+    const tot=document.createElement('button');
+    tot.className='tab'+(STATE.activeTab==='total'?' active':'');
+    tot.textContent='Consolidado'; tot.style.marginLeft='auto';
+    tot.onclick=()=>setActiveTab('total'); bar.appendChild(tot);
+  }
+}
+
+function setActiveTab(id){ STATE.activeTab=id; renderTabs(); renderContent(); }
+
+function renderContent(){
+  const el=document.getElementById('content');
+  if(!STATE.activeTab||!STATE.faturas.length){el.innerHTML='';return;}
+  if(STATE.activeTab==='total'){renderTotal(el);return;}
+  const f=STATE.faturas.find(x=>x.id===STATE.activeTab);
+  if(f) renderMes(el,f);
+}
+
+function renderMes(el,f){
+  const p=getP(); const r=calcMes(f,p); let html='';
+
+  // Barra de ações
+  html+='<div class="export-bar no-print" style="margin-bottom:14px">'+
+    '<button class="btn btn-amber" onclick="abrirEdit(\''+f.id+'\')">✏ Editar dados da fatura</button>'+
+    '</div>';
+
+  // Alertas de cálculo
+  if(r && r.alerts && r.alerts.length){
+    html += r.alerts.map(a=>'<div class="alert alert-'+(a.level==='warn'?'warn':'info')+'"><span>⚠ '+a.msg+'</span></div>').join('');
+  }
+
+  if(!f.manualConfirmed || f.faltando.length){
+    html+='<div class="alert alert-err"><span>⚠ Fatura com dados incompletos. Clique em "Editar dados da fatura" para preencher os campos faltantes: '+f.faltando.join(', ')+'</span></div>';
+    el.innerHTML=html; return;
+  }
+
+  // 1. Dados da fatura
+  html+='<div class="card"><div class="card-hdr">1 · Dados da fatura — '+f.mes+'</div>'+
+  '<table class="dtbl"><thead><tr><th>Item</th><th>Unidade</th><th class="val">Valor</th></tr></thead><tbody>'+
+  (f.totalFatura?'<tr><td>Valor total da fatura</td><td>R$</td><td class="val">'+fB(f.totalFatura)+'</td></tr>':'')+
+  (f.vencimento?'<tr><td>Vencimento</td><td>—</td><td class="val">'+f.vencimento+'</td></tr>':'')+
+  (f.diasFatura?'<tr><td>Dias do período</td><td>dias</td><td class="val">'+f.diasFatura+'</td></tr>':'')+
+  '<tr><td>Energia na ponta</td><td>kWh/mês</td><td class="val">'+fK(f.consumoPonta)+'</td></tr>'+
+  '<tr><td>Energia fora de ponta</td><td>kWh/mês</td><td class="val">'+fK(f.consumoFP)+'</td></tr>'+
+  (f.tePonta?'<tr><td>TE ponta</td><td>R$/kWh</td><td class="val">'+fN(f.tePonta,6)+'</td></tr>':'')+
+  (f.tusdPonta?'<tr><td>TUSD ponta</td><td>R$/kWh</td><td class="val">'+fN(f.tusdPonta,6)+'</td></tr>':'')+
+  '<tr><td>Tarifa ponta (TE+TUSD)</td><td>R$/kWh</td><td class="val pos">'+fN(f.tarifaPonta,6)+'</td></tr>'+
+  (f.teFP?'<tr><td>TE fora ponta</td><td>R$/kWh</td><td class="val">'+fN(f.teFP,6)+'</td></tr>':'')+
+  (f.tusdFP?'<tr><td>TUSD fora ponta</td><td>R$/kWh</td><td class="val">'+fN(f.tusdFP,6)+'</td></tr>':'')+
+  '<tr><td>Tarifa fora ponta (TE+TUSD)</td><td>R$/kWh</td><td class="val">'+fN(f.tarifaFP,6)+'</td></tr>'+
+  '<tr><td>Δ tarifário</td><td>R$/kWh</td><td class="val '+(r.delta>0?'pos':'neg')+'">'+fN(r.delta,6)+'</td></tr>'+
+  '<tr><td>Demanda contratada</td><td>kW</td><td class="val">'+fN(f.demandaContratada,0)+'</td></tr>'+
+  '<tr><td>Demanda registrada</td><td>kW</td><td class="val">'+fN(f.demandaRegistrada,2)+'</td></tr>'+
+  (r.excedente>0?'<tr><td>Excedente de demanda</td><td>kW</td><td class="val neg">'+fN(r.excedente,2)+
+    (r.excedenteFatura!==null?' <small style="color:var(--text3)">(fatura)</small>':' <small style="color:var(--amber)">(calculado)</small>')+
+    '</td></tr>':'')+
+  '<tr><td>E_ponta,dia</td><td>kWh/dia</td><td class="val">'+fN(r.ePontaDia,2)+'</td></tr>'+
+  '</tbody></table></div>';
+
+  // 2-3. Premissas & Arbitragem
+  html+='<div class="card"><div class="card-hdr">2–3 · Premissas BESS & Arbitragem — fração: '+(p.frac*100).toFixed(0)+'%</div>'+
+  '<table class="dtbl"><thead><tr><th>Parâmetro</th><th>Equação</th><th class="val">Resultado</th></tr></thead><tbody>'+
+  '<tr><td>RTE = η_chg × η_dis</td><td><span class="tdf">'+(p.eta_chg*100).toFixed(0)+'% × '+(p.eta_dis*100).toFixed(0)+'%</span></td><td class="val">'+fN(r.rte*100,2)+'%</td></tr>'+
+  '<tr><td>E_ent (coberta)</td><td><span class="tdf">'+fN(r.ePontaDia,2)+' × '+(p.frac*100).toFixed(0)+'%</span></td><td class="val">'+fN(r.eEnt,2)+' kWh/dia</td></tr>'+
+  '<tr><td>E_grid,in (recarga)</td><td><span class="tdf">E_ent ÷ RTE + E_aux</span></td><td class="val">'+fN(r.eGridIn,2)+' kWh/dia</td></tr>'+
+  '<tr><td>E_nom(BOL) Overbuild</td><td><span class="tdf">E_ent ÷ (η_dis×DoD×f_ovb)</span></td><td class="val b">'+fN(r.eNomOvb,1)+' kWh</td></tr>'+
+  '<tr><td>E_nom(BOL) Augmentation</td><td><span class="tdf">E_ent ÷ (η_dis×DoD×f_aug)</span></td><td class="val b">'+fN(r.eNomAug,1)+' kWh</td></tr>'+
+  '</tbody></table></div>';
+
+  // 4. Resultado econômico
+  html+='<div class="card"><div class="card-hdr">4 · Resultado econômico</div>'+
+  '<table class="dtbl"><thead><tr><th>Parâmetro</th><th>Equação</th><th class="val">Resultado</th></tr></thead><tbody>'+
+  '<tr><td>Eco_dia (arbitragem)</td><td><span class="tdf">Δ×E_ent − Tarifa_fp×E_grid,in</span></td><td class="val '+(r.ecoDia>=0?'pos':'neg')+'">'+fB(r.ecoDia)+'/dia</td></tr>'+
+  '<tr><td>Eco_mês (arbitragem)</td><td><span class="tdf">Eco_dia × '+p.dias+' dias</span></td><td class="val '+(r.ecoMes>=0?'pos':'neg')+'">'+fB(r.ecoMes)+'</td></tr>'+
+  '<tr><td>Excedente demanda</td><td><span class="tdf">'+fN(f.demandaRegistrada,2)+' − '+fN(f.demandaContratada,0)+'</span></td><td class="val '+(r.excedente>0?'neg':'')+'">'+fN(r.excedente,2)+' kW</td></tr>'+
+  '<tr><td>Tarifa ultrapassagem</td><td><span class="tdf">TUSD × 2 = '+fN(r.tarifaUltra,6)+'</span></td><td class="val">'+fB(r.tarifaUltra)+'/kW</td></tr>'+
+  '<tr><td>Eco. peak shaving</td><td><span class="tdf">'+fN(r.excedente,2)+' × '+fN(r.tarifaUltra,6)+'</span></td><td class="val pos">'+fB(r.ecoPeak)+'</td></tr>'+
+  '<tr><td><b>Economia total/mês</b></td><td></td><td class="val pos"><b>'+fB(r.ecoTotal)+'</b></td></tr>'+
+  '</tbody></table></div>';
+
+  // 5. Backup
+  html+='<div class="card"><div class="card-hdr">5 · Backup</div>'+
+  '<table class="dtbl"><thead><tr><th>Parâmetro</th><th>Equação</th><th class="val">Resultado</th></tr></thead><tbody>'+
+  '<tr><td>E_ent,backup</td><td><span class="tdf">'+p.pbkp+'kW × '+p.tbkp+'h</span></td><td class="val">'+fN(r.eEntBkp,1)+' kWh</td></tr>'+
+  '<tr><td>E_nom(BOL) Overbuild</td><td><span class="tdf">E_bkp ÷ (η_dis×DoD×f_ovb)</span></td><td class="val">'+fN(r.eNomBkpOvb,1)+' kWh</td></tr>'+
+  '<tr><td>E_nom(BOL) Augmentation</td><td><span class="tdf">E_bkp ÷ (η_dis×DoD×f_aug)</span></td><td class="val">'+fN(r.eNomBkpAug,1)+' kWh</td></tr>'+
+  '<tr><td colspan="2" style="font-size:12px;color:var(--text2)">Arbitragem define os kWh · Backup define o PCS mínimo</td><td class="val">'+(r.eNomOvb>=r.eNomBkpOvb?'Arbitragem domina':'Backup domina')+'</td></tr>'+
+  '</tbody></table></div>';
+
+  // KPIs
+  const projAnual=r.ecoTotal*12;
+  const pb=p.capex>0&&r.ecoTotal>0?fN(p.capex/r.ecoTotal,1)+' meses':'—';
+  const roi1=p.capex>0&&r.ecoTotal>0?fN((projAnual/p.capex)*100,1)+'%':'—';
+  const roi5=p.capex>0&&r.ecoTotal>0?fN(((projAnual*5-p.capex)/p.capex)*100,1)+'%':'—';
+  const roi10=p.capex>0&&r.ecoTotal>0?fN(((projAnual*10-p.capex)/p.capex)*100,1)+'%':'—';
+  html+='<div class="kpi-grid">'+
+  '<div class="kpi g"><div class="kpi-lbl">Eco. arbitragem</div><div class="kpi-val">'+fB(r.ecoMes)+'</div></div>'+
+  '<div class="kpi g"><div class="kpi-lbl">Eco. peak shaving</div><div class="kpi-val">'+fB(r.ecoPeak)+'</div></div>'+
+  '<div class="kpi g"><div class="kpi-lbl">Economia total/mês</div><div class="kpi-val">'+fB(r.ecoTotal)+'</div></div>'+
+  '<div class="kpi g"><div class="kpi-lbl">Projeção anual</div><div class="kpi-val">'+fB(projAnual)+'</div></div>'+
+  '<div class="kpi b"><div class="kpi-lbl">E_nom Overbuild</div><div class="kpi-val">'+fN(r.eFinOvb,0)+' kWh</div></div>'+
+  '<div class="kpi b"><div class="kpi-lbl">E_nom Augmentation</div><div class="kpi-val">'+fN(r.eFinAug,0)+' kWh</div></div>'+
+  '<div class="kpi p"><div class="kpi-lbl">PCS recomendado</div><div class="kpi-val">'+fN(r.pcsFinal,0)+' kW</div></div>'+
+  '<div class="kpi '+(r.cRateOvb>1||r.cRateAug>1?'r':'b')+'"><div class="kpi-lbl">C-rate Overbuild</div><div class="kpi-val">'+fN(r.cRateOvb,2)+'C</div></div>'+
+  '<div class="kpi '+(r.cRateOvb>1||r.cRateAug>1?'r':'b')+'"><div class="kpi-lbl">C-rate Augmentation</div><div class="kpi-val">'+fN(r.cRateAug,2)+'C</div></div>'+
+  (p.capex>0?
+  '<div class="kpi a"><div class="kpi-lbl">Payback</div><div class="kpi-val">'+pb+'</div></div>'+
+  '<div class="kpi a"><div class="kpi-lbl">ROI ano 1</div><div class="kpi-val">'+roi1+'</div></div>'+
+  '<div class="kpi a"><div class="kpi-lbl">ROI 5 anos</div><div class="kpi-val">'+roi5+'</div></div>'+
+  '<div class="kpi a"><div class="kpi-lbl">ROI 10 anos</div><div class="kpi-val">'+roi10+'</div></div>':'')+
+  '</div>';
+
+  // Proposta
+  html+='<div class="proposta"><div class="prop-title">6 · Proposta Final — Photons Energia Solar</div>'+
+  '<div class="prop-grid">'+
+  '<div class="prop-item"><div class="prop-lbl">PCS sugerido</div><div class="prop-val">'+fN(r.pcsFinal,0)+' kW</div><div class="prop-sub">max(arb: '+fN(r.pcsArb,0)+', bkp: '+fN(r.pcsBkp,0)+')</div></div>'+
+  '<div class="prop-item"><div class="prop-lbl">Energia BOL — Overbuild</div><div class="prop-val">'+fN(r.eFinOvb,0)+' kWh</div></div>'+
+  '<div class="prop-item"><div class="prop-lbl">Energia BOL — Augmentation</div><div class="prop-val">'+fN(r.eFinAug,0)+' kWh</div></div>'+
+  '<div class="prop-item"><div class="prop-lbl">Economia esperada</div><div class="prop-val">'+fB(r.ecoTotal)+'</div><div class="prop-sub">'+(p.frac*100).toFixed(0)+'% cobertura/mês</div></div>'+
+  (p.capex>0&&r.ecoTotal>0?'<div class="prop-item"><div class="prop-lbl">Payback</div><div class="prop-val">'+pb+'</div></div>':'')+
+  '</div></div>';
+
+  // ROI card
+  if(p.capex>0&&r.ecoTotal>0){
+    html+='<div class="roi-card"><div class="roi-title">Análise de Retorno — CAPEX: '+fB(p.capex)+'</div><div class="roi-grid">'+
+    '<div class="roi-item"><div class="roi-lbl">Projeção anual</div><div class="roi-val">'+fB(projAnual)+'</div><div class="roi-sub">Média mensal × 12</div></div>'+
+    '<div class="roi-item"><div class="roi-lbl">Payback</div><div class="roi-val">'+pb+'</div></div>'+
+    '<div class="roi-item"><div class="roi-lbl">ROI ano 1</div><div class="roi-val">'+roi1+'</div></div>'+
+    '<div class="roi-item"><div class="roi-lbl">ROI 5 anos</div><div class="roi-val">'+roi5+'</div></div>'+
+    '<div class="roi-item"><div class="roi-lbl">ROI 10 anos</div><div class="roi-val">'+roi10+'</div></div>'+
+    '</div></div>';
+  }
+
+  // Memória
+  const mid='mem_'+f.id;
+  html+='<div style="margin-bottom:24px"><button class="mem-toggle" onclick="toggleMem(\''+mid+'\')">▶ Memória de cálculo completa</button>'+
+  '<div class="mem-box" id="'+mid+'">'+buildMem(f,r,p)+'</div></div>';
+  el.innerHTML=html;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER TOTAL
+═══════════════════════════════════════════════════════════ */
+function renderTotal(el){
+  const p=getP();
+  const res=STATE.faturas.map(f=>({f,r:calcMes(f,p)})).filter(x=>x.r);
+  if(!res.length){el.innerHTML='<div class="alert alert-warn"><span>Nenhuma fatura completa para consolidar.</span></div>';return;}
+  const ecoTot=res.reduce((s,x)=>s+x.r.ecoTotal,0);
+  const arbTot=res.reduce((s,x)=>s+x.r.ecoMes,0);
+  const peakTot=res.reduce((s,x)=>s+x.r.ecoPeak,0);
+  const n=res.length, media=ecoTot/n, projAnual=media*12;
+  const maxPCS=Math.max(...res.map(x=>x.r.pcsFinal));
+  const maxOvb=Math.max(...res.map(x=>x.r.eFinOvb));
+  const maxAug=Math.max(...res.map(x=>x.r.eFinAug));
+  const melhor=res.reduce((a,b)=>a.r.ecoTotal>=b.r.ecoTotal?a:b);
+  const pior=res.reduce((a,b)=>a.r.ecoTotal<=b.r.ecoTotal?a:b);
+  const pb=p.capex>0&&media>0?fN(p.capex/media,1)+' meses':'—';
+  const roi1=p.capex>0&&media>0?fN((projAnual/p.capex)*100,1)+'%':'—';
+  const roi5=p.capex>0&&media>0?fN(((projAnual*5-p.capex)/p.capex)*100,1)+'%':'—';
+  const roi10=p.capex>0&&media>0?fN(((projAnual*10-p.capex)/p.capex)*100,1)+'%':'—';
+
+  let html='<div class="total-tag"><span class="ttlbl">Economia total acumulada ('+n+' fatura'+(n>1?'s':'')+' — '+res.map(x=>x.f.mes).join(', ')+'):</span><span class="ttval">'+fB(ecoTot)+'</span></div>';
+
+  html+='<div class="kpi-grid">'+
+  '<div class="kpi g"><div class="kpi-lbl">Eco. acumulada</div><div class="kpi-val">'+fB(ecoTot)+'</div></div>'+
+  '<div class="kpi g"><div class="kpi-lbl">Média mensal</div><div class="kpi-val">'+fB(media)+'</div></div>'+
+  '<div class="kpi g"><div class="kpi-lbl">Projeção anual</div><div class="kpi-val">'+fB(projAnual)+'</div></div>'+
+  '<div class="kpi g"><div class="kpi-lbl">Eco. arbitragem</div><div class="kpi-val">'+fB(arbTot)+'</div></div>'+
+  '<div class="kpi g"><div class="kpi-lbl">Eco. peak shaving</div><div class="kpi-val">'+fB(peakTot)+'</div></div>'+
+  '<div class="kpi b"><div class="kpi-lbl">Maior E Overbuild</div><div class="kpi-val">'+fN(maxOvb,0)+' kWh</div></div>'+
+  '<div class="kpi b"><div class="kpi-lbl">Maior E Augmentation</div><div class="kpi-val">'+fN(maxAug,0)+' kWh</div></div>'+
+  '<div class="kpi p"><div class="kpi-lbl">Maior PCS necessário</div><div class="kpi-val">'+fN(maxPCS,0)+' kW</div></div>'+
+  (p.capex>0&&media>0?
+  '<div class="kpi a"><div class="kpi-lbl">Payback</div><div class="kpi-val">'+pb+'</div></div>'+
+  '<div class="kpi a"><div class="kpi-lbl">ROI ano 1</div><div class="kpi-val">'+roi1+'</div></div>'+
+  '<div class="kpi a"><div class="kpi-lbl">ROI 5 anos</div><div class="kpi-val">'+roi5+'</div></div>'+
+  '<div class="kpi a"><div class="kpi-lbl">ROI 10 anos</div><div class="kpi-val">'+roi10+'</div></div>':'')+
+  '</div>';
+
+  html+='<div class="proposta"><div class="prop-title">Proposta Final Consolidada — Photons Energia Solar</div><div class="prop-grid">'+
+  '<div class="prop-item"><div class="prop-lbl">Maior PCS necessário</div><div class="prop-val">'+fN(maxPCS,0)+' kW</div></div>'+
+  '<div class="prop-item"><div class="prop-lbl">E_nom Overbuild</div><div class="prop-val">'+fN(maxOvb,0)+' kWh</div></div>'+
+  '<div class="prop-item"><div class="prop-lbl">E_nom Augmentation</div><div class="prop-val">'+fN(maxAug,0)+' kWh</div></div>'+
+  '<div class="prop-item"><div class="prop-lbl">Economia média/mês</div><div class="prop-val">'+fB(media)+'</div><div class="prop-sub">'+(p.frac*100).toFixed(0)+'% cobertura</div></div>'+
+  '</div></div>';
+
+  html+='<div class="chart-card"><div class="chart-title">Economia mensal — arbitragem vs peak shaving</div>'+
+  '<div style="position:relative;height:260px"><canvas id="cEco"></canvas></div>'+
+  '<div class="legend"><span><span class="dot" style="background:#3a5c1e"></span>Arbitragem</span><span><span class="dot" style="background:#3d2fa0"></span>Peak shaving</span></div></div>';
+
+  html+='<div class="two-col">'+
+  '<div class="chart-card" style="margin-bottom:0"><div class="chart-title">Consumo ponta (kWh/mês)</div><div style="position:relative;height:200px"><canvas id="cPonta"></canvas></div></div>'+
+  '<div class="chart-card" style="margin-bottom:0"><div class="chart-title">Demanda registrada vs contratada (kW)</div><div style="position:relative;height:200px"><canvas id="cDem"></canvas></div>'+
+  '<div class="legend" style="margin-top:6px"><span><span class="dot" style="background:#3d2fa0"></span>Contratada</span><span><span class="dot" style="background:#8a1414"></span>Registrada</span></div></div></div>';
+
+  html+='<div class="card"><div class="card-hdr">Detalhamento consolidado</div>'+
+  '<table class="dtbl"><thead><tr><th>Indicador</th><th class="val">Valor</th></tr></thead><tbody>'+
+  '<tr><td>Faturas analisadas</td><td class="val">'+n+'</td></tr>'+
+  '<tr><td>Período</td><td class="val">'+res.map(x=>x.f.mes).join(' · ')+'</td></tr>'+
+  '<tr><td>Fração de cobertura</td><td class="val">'+(p.frac*100).toFixed(0)+'%</td></tr>'+
+  '<tr><td>Eco. total arbitragem</td><td class="val pos">'+fB(arbTot)+'</td></tr>'+
+  '<tr><td>Eco. total peak shaving</td><td class="val pos">'+fB(peakTot)+'</td></tr>'+
+  '<tr><td>Economia total geral</td><td class="val pos">'+fB(ecoTot)+'</td></tr>'+
+  '<tr><td>Média mensal ('+n+' meses)</td><td class="val pos">'+fB(media)+'</td></tr>'+
+  '<tr><td>Projeção anual (média × 12)</td><td class="val pos">'+fB(projAnual)+'</td></tr>'+
+  '<tr><td>Maior PCS necessário</td><td class="val">'+fN(maxPCS,0)+' kW</td></tr>'+
+  '<tr><td>E_nom Overbuild</td><td class="val">'+fN(maxOvb,0)+' kWh</td></tr>'+
+  '<tr><td>E_nom Augmentation</td><td class="val">'+fN(maxAug,0)+' kWh</td></tr>'+
+  '<tr><td>Mês maior economia</td><td class="val">'+melhor.f.mes+'</td></tr>'+
+  '<tr><td>Mês menor economia</td><td class="val">'+pior.f.mes+'</td></tr>'+
+  (p.capex>0&&media>0?
+  '<tr><td colspan="2" style="padding:8px 13px 3px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);background:var(--surface2)">Retorno — CAPEX: '+fB(p.capex)+'</td></tr>'+
+  '<tr><td>Payback</td><td class="val">'+pb+'</td></tr>'+
+  '<tr><td>ROI ano 1</td><td class="val pos">'+roi1+'</td></tr>'+
+  '<tr><td>ROI 5 anos</td><td class="val pos">'+roi5+'</td></tr>'+
+  '<tr><td>ROI 10 anos</td><td class="val pos">'+roi10+'</td></tr>':'')+
+  '</tbody></table></div>';
+
+  el.innerHTML=html;
+  setTimeout(()=>{
+    const labels=res.map(x=>x.f.mes);
+    if(STATE.charts.eco)STATE.charts.eco.destroy();
+    if(STATE.charts.ponta)STATE.charts.ponta.destroy();
+    if(STATE.charts.dem)STATE.charts.dem.destroy();
+    STATE.charts.eco=new Chart(document.getElementById('cEco'),{type:'bar',data:{labels,datasets:[
+      {label:'Arbitragem',data:res.map(x=>+x.r.ecoMes.toFixed(2)),backgroundColor:'#3a5c1e',borderRadius:5,stack:'s'},
+      {label:'Peak shaving',data:res.map(x=>+x.r.ecoPeak.toFixed(2)),backgroundColor:'#3d2fa0',borderRadius:5,stack:'s'}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fB(c.raw),footer:i=>'Total: '+fB(i.reduce((s,c)=>s+c.raw,0))}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:11}}},y:{stacked:true,ticks:{font:{size:11},callback:v=>'R$'+fK(v)},grid:{color:'rgba(0,0,0,0.04)'}}}}});
+    STATE.charts.ponta=new Chart(document.getElementById('cPonta'),{type:'bar',data:{labels,datasets:[{label:'Consumo ponta',data:res.map(x=>x.f.consumoPonta),backgroundColor:'#0f4a8a',borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{ticks:{font:{size:11},callback:v=>fK(v)+' kWh'},grid:{color:'rgba(0,0,0,0.04)'}}}}});
+    STATE.charts.dem=new Chart(document.getElementById('cDem'),{type:'bar',data:{labels,datasets:[{label:'Contratada',data:res.map(x=>x.f.demandaContratada),backgroundColor:'#3d2fa0',borderRadius:5},{label:'Registrada',data:res.map(x=>x.f.demandaRegistrada),backgroundColor:'#8a1414',borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{ticks:{font:{size:11},callback:v=>fK(v)+' kW'},grid:{color:'rgba(0,0,0,0.04)'}}}}});
+  },60);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MEMÓRIA DE CÁLCULO
+═══════════════════════════════════════════════════════════ */
+function buildMem(f,r,p){
+  const pc=v=>(v*100).toFixed(0)+'%';
+  return'MEMÓRIA DE CÁLCULO — '+f.mes+'\n'+
+  '══════════════════════════════════════\n\n'+
+  '1. DADOS DA FATURA\n'+
+  '   Consumo ponta ......... '+fK(f.consumoPonta)+' kWh/mês\n'+
+  '   Consumo fora ponta .... '+fK(f.consumoFP)+' kWh/mês\n'+
+  '   Tarifa ponta .......... R$ '+fN(f.tarifaPonta,6)+'/kWh\n'+
+  '   Tarifa fora ponta ..... R$ '+fN(f.tarifaFP,6)+'/kWh\n'+
+  '   Δ tarifário ........... R$ '+fN(r.delta,6)+'/kWh\n\n'+
+  '2. PREMISSAS\n'+
+  '   η_chg='+pc(p.eta_chg)+' | η_dis='+pc(p.eta_dis)+' | RTE='+pc(r.rte)+'\n'+
+  '   DoD='+pc(p.dod)+' | E_aux='+p.eaux+' kWh | Fração='+pc(p.frac)+'\n'+
+  '   f_ovb='+pc(p.ovb)+' | f_aug='+pc(p.aug)+'\n\n'+
+  '3. ARBITRAGEM\n'+
+  '   E_ponta,dia = '+fK(f.consumoPonta)+' / '+p.dias+' = '+fN(r.ePontaDia,2)+' kWh/dia\n'+
+  '   E_ent = '+fN(r.ePontaDia,2)+' × '+pc(p.frac)+' = '+fN(r.eEnt,2)+' kWh/dia\n'+
+  '   E_grid,in = '+fN(r.eEnt,2)+' / '+fN(r.rte,4)+' + '+p.eaux+' = '+fN(r.eGridIn,2)+' kWh/dia\n'+
+  '   E_nom Ovb = '+fN(r.eEnt,2)+' / ('+pc(p.eta_dis)+'×'+pc(p.dod)+'×'+pc(p.ovb)+') = '+fN(r.eNomOvb,1)+' kWh\n'+
+  '   E_nom Aug = '+fN(r.eEnt,2)+' / ('+pc(p.eta_dis)+'×'+pc(p.dod)+'×'+pc(p.aug)+') = '+fN(r.eNomAug,1)+' kWh\n\n'+
+  '4. RESULTADO ECONÔMICO\n'+
+  '   Eco_dia = '+fN(r.delta,6)+'×'+fN(r.eEnt,2)+' − '+fN(f.tarifaFP,6)+'×'+fN(r.eGridIn,2)+'\n'+
+  '           = '+fN(r.delta*r.eEnt,2)+' − '+fN(f.tarifaFP*r.eGridIn,2)+' = R$ '+fN(r.ecoDia,2)+'/dia\n'+
+  '   Eco_mês = '+fN(r.ecoDia,2)+' × '+p.dias+' = R$ '+fN(r.ecoMes,2)+'\n'+
+  '   Eco peak shaving = '+fN(r.excedente,2)+' × '+fN(r.tarifaUltra,6)+' = R$ '+fN(r.ecoPeak,2)+'\n'+
+  '   Eco TOTAL = R$ '+fN(r.ecoTotal,2)+'/mês\n\n'+
+  '5. BACKUP\n'+
+  '   E_bkp = '+p.pbkp+'×'+p.tbkp+' = '+fN(r.eEntBkp,1)+' kWh\n'+
+  '   E_nom Ovb bkp = '+fN(r.eNomBkpOvb,1)+' kWh | Aug = '+fN(r.eNomBkpAug,1)+' kWh\n\n'+
+  '6. PCS FINAL = max(arb '+fN(r.pcsArb,1)+', bkp '+fN(r.pcsBkp,0)+') = '+fN(r.pcsFinal,0)+' kW\n'+
+  '   E_final Ovb = '+fN(r.eFinOvb,1)+' kWh | E_final Aug = '+fN(r.eFinAug,1)+' kWh\n'+
+  (p.capex>0&&r.ecoTotal>0?
+  '\n7. RETORNO\n'+
+  '   Projeção anual = R$ '+fN(r.ecoTotal*12,2)+'\n'+
+  '   Payback = '+fN(p.capex/r.ecoTotal,1)+' meses\n'+
+  '   ROI 1a = '+fN((r.ecoTotal*12/p.capex)*100,1)+'%\n'+
+  '   ROI 5a = '+fN(((r.ecoTotal*12*5-p.capex)/p.capex)*100,1)+'%\n'+
+  '   ROI 10a = '+fN(((r.ecoTotal*12*10-p.capex)/p.capex)*100,1)+'%\n':'')+
+  '\n6. C-RATE (potência / armazenamento)\n'+
+  '   PCS final ............. '+fN(r.pcsFinal,1)+' kW\n'+
+  '   E_final Overbuild ..... '+fN(r.eFinOvb,1)+' kWh\n'+
+  '   E_final Augmentation .. '+fN(r.eFinAug,1)+' kWh\n'+
+  '   C-rate Overbuild ...... '+fN(r.cRateOvb,3)+'C  ('+fN(r.pcsFinal,1)+' / '+fN(r.eFinOvb,1)+')\n'+
+  '   C-rate Augmentation ... '+fN(r.cRateAug,3)+'C  ('+fN(r.pcsFinal,1)+' / '+fN(r.eFinAug,1)+')\n'+
+  (r.cRateOvb>1||r.cRateAug>1?'   ⚠ C-rate acima de 1C — verificar especificação da célula\n':'   ✓ C-rate dentro do limite (≤ 1C)\n');
+}
+
+function toggleMem(id){
+  const el=document.getElementById(id);
+  const open=el.classList.toggle('open');
+  el.previousElementSibling.textContent=(open?'▼':'▶')+' Memória de cálculo completa';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RELATÓRIO PDF COMPLETO
+═══════════════════════════════════════════════════════════ */
+function gerarRelatorioMes(){
+  if(!STATE.activeTab||STATE.activeTab==='total'){ window.print(); return; }
+  window.print();
+}
+
+function gerarRelatorioCompleto(){
+  const p=getP();
+  const res=STATE.faturas.map(f=>({f,r:calcMes(f,p)})).filter(x=>x.r);
+  if(!res.length){ toast('Nenhuma fatura completa para gerar relatório','warn'); return; }
+
+  const ecoTot=res.reduce((s,x)=>s+x.r.ecoTotal,0);
+  const n=res.length, media=ecoTot/n, projAnual=media*12;
+  const maxPCS=Math.max(...res.map(x=>x.r.pcsFinal));
+  const maxOvb=Math.max(...res.map(x=>x.r.eFinOvb));
+  const maxAug=Math.max(...res.map(x=>x.r.eFinAug));
+  const melhor=res.reduce((a,b)=>a.r.ecoTotal>=b.r.ecoTotal?a:b);
+  const pior=res.reduce((a,b)=>a.r.ecoTotal<=b.r.ecoTotal?a:b);
+  const pb=p.capex>0&&media>0?fN(p.capex/media,1)+' meses':'—';
+
+  // Conclusão técnica automática
+  const conclusao = 'Com base nas '+n+' fatura'+(n>1?'s':'')+' analisadas ('+res.map(x=>x.f.mes).join(', ')+
+    '), o sistema BESS recomendado deve considerar PCS mínimo de '+fN(maxPCS,0)+' kW e capacidade nominal BOL entre '+
+    fN(maxAug,0)+' kWh (Augmentation) e '+fN(maxOvb,0)+' kWh (Overbuild), conforme estratégia adotada. '+
+    'A economia média mensal estimada é de '+fB(media)+', considerando cobertura de '+(p.frac*100).toFixed(0)+
+    '% da energia de ponta e as premissas técnicas informadas. Projeção anual: '+fB(projAnual)+'.'+
+    (p.capex>0&&media>0?' Payback estimado: '+pb+'.':'');
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Relatório BESS — Photons Energia Solar</title>
+<style>
+body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:0;padding:0}
+.page{page-break-after:always;padding:32px 40px;max-width:800px;margin:0 auto}
+.page:last-child{page-break-after:auto}
+h1{font-size:22px;color:#1a2e10;margin-bottom:6px}
+h2{font-size:15px;color:#1a2e10;margin:20px 0 8px;border-bottom:1px solid #b3d9b3;padding-bottom:4px}
+h3{font-size:13px;color:#3a5c1e;margin:14px 0 6px}
+.subtitle{font-size:13px;color:#666;margin-bottom:4px}
+.kpi-row{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}
+.kpi-box{background:#eaf4ea;border:1px solid #b3d9b3;border-radius:6px;padding:10px 14px;min-width:150px}
+.kpi-box .lbl{font-size:10px;color:#3a5c1e;text-transform:uppercase;letter-spacing:.04em}
+.kpi-box .val{font-size:18px;font-weight:700;color:#1a2e10;font-family:monospace}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+th{background:#1a2e10;color:#fff;padding:6px 10px;text-align:left;font-size:10px;text-transform:uppercase}
+td{padding:6px 10px;border-bottom:1px solid #ddd}
+tr:nth-child(even) td{background:#f9f9f9}
+.pos{color:#1a2e10;font-weight:600}
+.proposta{background:#1a2e10;color:#fff;border-radius:8px;padding:16px;margin:14px 0}
+.prop-grid{display:flex;gap:12px;flex-wrap:wrap}
+.prop-item{background:rgba(255,255,255,.1);border-radius:6px;padding:10px 14px;min-width:140px}
+.prop-lbl{font-size:10px;color:rgba(255,255,255,.6);text-transform:uppercase}
+.prop-val{font-size:16px;font-weight:700;color:#fff;font-family:monospace}
+.conclusao{background:#f0efe9;border-left:4px solid #1a2e10;padding:14px 16px;margin:14px 0;font-size:13px;line-height:1.7}
+.header-bar{background:#1a2e10;color:#fff;padding:20px 40px;display:flex;align-items:center;justify-content:space-between}
+.header-bar h1{color:#7ecf5a;margin:0}
+.header-bar .sub{font-size:12px;color:rgba(255,255,255,.6);margin-top:4px}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+
+<!-- CAPA -->
+<div class="header-bar">
+  <div><h1>Photons Energia Solar</h1><div class="sub">Dashboard BESS v2.0</div></div>
+  <div style="text-align:right;font-size:11px;color:rgba(255,255,255,.6)">Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+</div>
+<div class="page">
+  <h1>Relatório de Dimensionamento BESS</h1>
+  <div class="subtitle">Período: ${res.map(x=>x.f.mes).join(' · ')}</div>
+  <div class="subtitle">${n} fatura${n>1?'s':''} analisada${n>1?'s':''}</div>
+  <div class="kpi-row">
+    <div class="kpi-box"><div class="lbl">Economia total</div><div class="val">${fB(ecoTot)}</div></div>
+    <div class="kpi-box"><div class="lbl">Média mensal</div><div class="val">${fB(media)}</div></div>
+    <div class="kpi-box"><div class="lbl">Projeção anual</div><div class="val">${fB(projAnual)}</div></div>
+    <div class="kpi-box"><div class="lbl">PCS recomendado</div><div class="val">${fN(maxPCS,0)} kW</div></div>
+    <div class="kpi-box"><div class="lbl">E_nom Overbuild</div><div class="val">${fN(maxOvb,0)} kWh</div></div>
+    ${p.capex>0&&media>0?'<div class="kpi-box"><div class="lbl">Payback</div><div class="val">'+pb+'</div></div>':''}
+  </div>
+
+  <h2>Premissas Globais</h2>
+  <table><tr><th>Parâmetro</th><th>Valor</th></tr>
+  <tr><td>η_chg / η_dis</td><td>${(p.eta_chg*100).toFixed(0)}% / ${(p.eta_dis*100).toFixed(0)}%</td></tr>
+  <tr><td>RTE</td><td>${fN(p.eta_chg*p.eta_dis*100,2)}%</td></tr>
+  <tr><td>DoD</td><td>${(p.dod*100).toFixed(0)}%</td></tr>
+  <tr><td>f_cap Overbuild / Augmentation</td><td>${(p.ovb*100).toFixed(0)}% / ${(p.aug*100).toFixed(0)}%</td></tr>
+  <tr><td>Fração de cobertura</td><td>${(p.frac*100).toFixed(0)}%</td></tr>
+  <tr><td>Dias úteis / Janela ponta</td><td>${p.dias} dias / ${p.hponta}h</td></tr>
+  <tr><td>P_backup / t_backup</td><td>${p.pbkp} kW / ${p.tbkp}h</td></tr>
+  ${p.capex>0?'<tr><td>CAPEX</td><td>'+fB(p.capex)+'</td></tr>':''}
+  </table>
+</div>
+
+<!-- DETALHES POR MÊS -->
+${res.map((x,i)=>{
+  const f=x.f, r=x.r;
+  const projA=r.ecoTotal*12;
+  return `<div class="page">
+  <h2>${i+1}. ${f.mes}</h2>
+  ${f.totalFatura?'<div class="subtitle">Total da fatura: '+fB(f.totalFatura)+(f.vencimento?' · Vencimento: '+f.vencimento:'')+'</div>':''}
+  <h3>Dados da fatura</h3>
+  <table><tr><th>Item</th><th>Valor</th></tr>
+  <tr><td>Consumo ponta</td><td>${fK(f.consumoPonta)} kWh/mês</td></tr>
+  <tr><td>Consumo fora ponta</td><td>${fK(f.consumoFP)} kWh/mês</td></tr>
+  <tr><td>Tarifa ponta</td><td>R$ ${fN(f.tarifaPonta,6)}/kWh</td></tr>
+  <tr><td>Tarifa fora ponta</td><td>R$ ${fN(f.tarifaFP,6)}/kWh</td></tr>
+  <tr><td>Δ tarifário</td><td>R$ ${fN(r.delta,6)}/kWh</td></tr>
+  <tr><td>Demanda contratada / registrada</td><td>${fN(f.demandaContratada,0)} kW / ${fN(f.demandaRegistrada,2)} kW</td></tr>
+  ${r.excedente>0?'<tr><td>Excedente de demanda</td><td>'+fN(r.excedente,2)+' kW</td></tr>':''}
+  </table>
+  <h3>Dimensionamento e resultado</h3>
+  <table><tr><th>Parâmetro</th><th>Cálculo</th><th>Resultado</th></tr>
+  <tr><td>Energia diária ponta</td><td>${fK(f.consumoPonta)} / ${p.dias}</td><td>${fN(r.ePontaDia,2)} kWh/dia</td></tr>
+  <tr><td>Energia coberta (${(p.frac*100).toFixed(0)}%)</td><td>${fN(r.ePontaDia,2)} × ${(p.frac*100).toFixed(0)}%</td><td>${fN(r.eEnt,2)} kWh/dia</td></tr>
+  <tr><td>E_grid,in (recarga)</td><td>E_ent / RTE + E_aux</td><td>${fN(r.eGridIn,2)} kWh/dia</td></tr>
+  <tr><td>E_nom(BOL) Overbuild</td><td>E_ent / (η_dis×DoD×f_ovb)</td><td>${fN(r.eNomOvb,1)} kWh</td></tr>
+  <tr><td>E_nom(BOL) Augmentation</td><td>E_ent / (η_dis×DoD×f_aug)</td><td>${fN(r.eNomAug,1)} kWh</td></tr>
+  <tr><td>Eco_dia (arbitragem)</td><td>Δ×E_ent − TFP×E_grid,in</td><td class="pos">${fB(r.ecoDia)}/dia</td></tr>
+  <tr><td>Eco_mês (arbitragem)</td><td>Eco_dia × ${p.dias}</td><td class="pos">${fB(r.ecoMes)}</td></tr>
+  <tr><td>Eco. peak shaving</td><td>${fN(r.excedente,2)} × ${fN(r.tarifaUltra,6)}</td><td class="pos">${fB(r.ecoPeak)}</td></tr>
+  <tr><td><b>Economia total/mês</b></td><td></td><td class="pos"><b>${fB(r.ecoTotal)}</b></td></tr>
+  </table>
+  <div class="proposta">
+    <div style="font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:10px">Proposta</div>
+    <div class="prop-grid">
+      <div class="prop-item"><div class="prop-lbl">PCS</div><div class="prop-val">${fN(r.pcsFinal,0)} kW</div></div>
+      <div class="prop-item"><div class="prop-lbl">E BOL Ovb</div><div class="prop-val">${fN(r.eFinOvb,0)} kWh</div></div>
+      <div class="prop-item"><div class="prop-lbl">E BOL Aug</div><div class="prop-val">${fN(r.eFinAug,0)} kWh</div></div>
+      <div class="prop-item"><div class="prop-lbl">Eco./mês</div><div class="prop-val">${fB(r.ecoTotal)}</div></div>
+      ${p.capex>0&&r.ecoTotal>0?'<div class="prop-item"><div class="prop-lbl">Payback</div><div class="prop-val">'+fN(p.capex/r.ecoTotal,1)+' m</div></div>':''}
+    </div>
+  </div>
+  </div>`;
+}).join('')}
+
+<!-- CONCLUSÃO -->
+<div class="page">
+  <h2>Conclusão Técnica</h2>
+  <div class="conclusao">${conclusao}</div>
+  <h2>Resumo Consolidado</h2>
+  <table><tr><th>Indicador</th><th>Valor</th></tr>
+  <tr><td>Faturas analisadas</td><td>${n}</td></tr>
+  <tr><td>Período</td><td>${res.map(x=>x.f.mes).join(' · ')}</td></tr>
+  <tr><td>Economia total acumulada</td><td class="pos">${fB(ecoTot)}</td></tr>
+  <tr><td>Economia média mensal</td><td class="pos">${fB(media)}</td></tr>
+  <tr><td>Projeção anual</td><td class="pos">${fB(projAnual)}</td></tr>
+  <tr><td>Maior PCS necessário</td><td>${fN(maxPCS,0)} kW</td></tr>
+  <tr><td>E_nom Overbuild recomendada</td><td>${fN(maxOvb,0)} kWh</td></tr>
+  <tr><td>E_nom Augmentation recomendada</td><td>${fN(maxAug,0)} kWh</td></tr>
+  <tr><td>Mês maior economia</td><td>${melhor.f.mes}</td></tr>
+  <tr><td>Mês menor economia</td><td>${pior.f.mes}</td></tr>
+  ${p.capex>0&&media>0?'<tr><td>Payback</td><td>'+pb+'</td></tr>':''}
+  </table>
+  <div style="margin-top:32px;text-align:center;font-size:11px;color:#999">
+    Photons Energia Solar · Dashboard BESS v2.0 · ${new Date().toLocaleDateString('pt-BR')}
+  </div>
+</div>
+</body></html>`;
+
+  const win = window.open('','_blank');
+  if(!win){ toast('Pop-up bloqueado. Permita pop-ups e tente novamente.','err',5000); return; }
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>win.print(), 800);
+  toast('Relatório completo gerado','ok');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EXPORTAR CSV
+═══════════════════════════════════════════════════════════ */
+function exportarCSV(){
+  const p=getP();
+  const headers=['Mês','Consumo ponta (kWh)','Consumo fora ponta (kWh)','Tarifa ponta (R$/kWh)',
+    'Tarifa fora ponta (R$/kWh)','Delta tarifário','Demanda contratada (kW)','Demanda registrada (kW)',
+    'Ultrapassagem (kW)','Energia coberta/dia (kWh)','Recarga/dia (kWh)','Eco arbitragem (R$)',
+    'Eco peak shaving (R$)','Economia total (R$)','PCS arbitragem (kW)','PCS backup (kW)','PCS final (kW)',
+    'E_nom Overbuild (kWh)','E_nom Augmentation (kWh)','CAPEX (R$)','Payback (meses)'];
+  const rows=[headers];
+  STATE.faturas.forEach(f=>{
+    const r=calcMes(f,p);
+    if(!r){rows.push([f.mes,...Array(headers.length-1).fill('N/A')]);return;}
+    const pb=p.capex>0&&r.ecoTotal>0?(p.capex/r.ecoTotal).toFixed(1):'';
+    rows.push([
+      f.mes, f.consumoPonta, f.consumoFP, fN(f.tarifaPonta,6), fN(f.tarifaFP,6),
+      fN(r.delta,6), f.demandaContratada, f.demandaRegistrada, fN(r.excedente,2),
+      fN(r.eEnt,2), fN(r.eGridIn,2), r.ecoMes.toFixed(2), r.ecoPeak.toFixed(2),
+      r.ecoTotal.toFixed(2), fN(r.pcsArb,2), p.pbkp, fN(r.pcsFinal,0),
+      fN(r.eFinOvb,1), fN(r.eFinAug,1), p.capex||'', pb
+    ]);
+  });
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download='photons_bess_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('CSV exportado','ok');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   POP / DELETE / RESET
+═══════════════════════════════════════════════════════════ */
+function mostrarPop(title,msg,okLabel,fn){
+  document.getElementById('pop-title').textContent=title;
+  document.getElementById('pop-msg').textContent=msg;
+  document.getElementById('pop-ok').textContent=okLabel;
+  document.getElementById('pop-ok').onclick=()=>{fecharPop();fn();};
+  document.getElementById('pop-ov').style.display='flex';
+}
+function fecharPop(){document.getElementById('pop-ov').style.display='none';}
+
+function confirmarDelete(id){
+  const f=STATE.faturas.find(x=>x.id===id);if(!f)return;
+  mostrarPop('Remover fatura?','Deseja remover a fatura de '+f.mes+'?','Remover',()=>{
+    const idx=STATE.faturas.findIndex(x=>x.id===id);
+    STATE.faturas.splice(idx,1);
+    if(STATE.activeTab===id) STATE.activeTab=STATE.faturas.length?STATE.faturas[Math.max(0,idx-1)].id:'';
+    if(STATE.faturas.length===1&&STATE.activeTab==='total') STATE.activeTab=STATE.faturas[0].id;
+    if(!STATE.faturas.length) document.getElementById('empty-state').style.display='block';
+    salvarEstudo(); renderUI();
+    toast('Fatura removida','ok');
+  });
+}
+
+function confirmarReset(){
+  mostrarPop('Apagar tudo?','Todas as faturas serão removidas.','Apagar tudo',()=>{
+    STATE.faturas=[]; STATE.activeTab='';
+    Object.values(STATE.charts).forEach(c=>{try{c.destroy()}catch(e){}});STATE.charts={};
+    document.getElementById('file-input').value='';
+    document.getElementById('empty-state').style.display='block';
+    salvarEstudo(); renderUI();
+    toast('Estudo limpo','ok');
+  });
+}
+
+function recalcAll(){
+  salvarEstudo();
+  renderContent();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+(function init(){
+  const saved=carregarEstudoSalvo();
+  if(saved && saved.faturas && saved.faturas.length){
+    mostrarPop(
+      'Estudo salvo encontrado',
+      'Existe um estudo com '+saved.faturas.length+' fatura(s) salvo neste navegador ('+new Date(saved.savedAt||Date.now()).toLocaleString('pt-BR')+').\nDeseja carregar?',
+      'Carregar estudo',
+      ()=>restaurarEstudo(saved)
+    );
+  }
+})();
+</script>
+</body>
+</html>
